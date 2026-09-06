@@ -1,0 +1,15 @@
+DirectoryIndex index.php
+
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+</IfModule>
+
+<FilesMatch "^(config\.php|generate-icons\.php)$">
+    Require all denied
+</FilesMatch>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^includes/ - [F,L]
+    RewriteRule ^admin$ %{REQUEST_URI}/ [R=302,L]
+</IfModule>

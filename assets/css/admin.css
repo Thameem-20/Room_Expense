@@ -1,0 +1,63 @@
+.admin-body {
+    background: #d8cfc0;
+}
+
+.admin-app {
+    max-width: 760px;
+    margin: 0 auto;
+    min-height: 100dvh;
+    background: var(--bg);
+    padding: calc(20px + env(safe-area-inset-top, 0px)) 20px calc(28px + env(safe-area-inset-bottom, 0px));
+}
+
+.admin-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 22px;
+}
+
+.admin-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+@media (max-width: 640px) {
+    .admin-grid { grid-template-columns: 1fr; }
+}
+
+.admin-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 16px;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+    width: 100%;
+}
+
+.admin-card b { display: block; font-size: 18px; }
+.admin-card small { color: var(--muted); }
+
+.login-box {
+    max-width: 420px;
+    margin: 8vh auto 0;
+}
+
+.admin-person {
+    align-items: center;
+}
+
+.admin-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.admin-edit {
+    margin: 0 0 12px;
+}

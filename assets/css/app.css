@@ -19,8 +19,8 @@
     --radius-sm: 12px;
     --safe-t: env(safe-area-inset-top, 0px);
     --safe-b: env(safe-area-inset-bottom, 0px);
-    --app-h: 100dvh;
-    --nav-h: calc(68px + var(--safe-b));
+    --frame-h: 100lvh;
+    --nav-h: calc(58px + var(--safe-b));
     --font: "Manrope", system-ui, sans-serif;
     --display: "Manrope", system-ui, sans-serif;
     --ease: cubic-bezier(0.22, 1, 0.36, 1);
@@ -29,11 +29,10 @@
 * { box-sizing: border-box; }
 
 html {
-    height: 100%;
+    height: 100vh;
     height: -webkit-fill-available;
-    height: var(--app-h);
-    background: #0b1220;
-    overflow: hidden;
+    height: var(--frame-h);
+    background: #ffffff;
     overscroll-behavior: none;
     touch-action: pan-x pan-y;
 }
@@ -41,22 +40,16 @@ html {
 body {
     margin: 0;
     width: 100%;
-    min-height: 100%;
-    min-height: -webkit-fill-available;
-    min-height: var(--app-h);
     height: 100%;
-    height: -webkit-fill-available;
-    height: var(--app-h);
-    overflow: hidden;
-    overscroll-behavior: none;
-    touch-action: pan-x pan-y;
     font-family: var(--font);
     color: var(--ink);
-    background: var(--bg);
+    background: #ffffff;
     -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none;
+    touch-action: pan-x pan-y;
 }
 
-body.standalone { background: var(--bg); }
+body.standalone { background: #ffffff; }
 body.modal-open { overflow: hidden; }
 
 button, input { font: inherit; }
@@ -65,18 +58,19 @@ button:disabled { cursor: not-allowed; }
 
 .app {
     height: 100%;
-    height: -webkit-fill-available;
-    height: var(--app-h);
     max-width: 430px;
     margin: 0 auto;
     position: relative;
     background: var(--bg);
+    display: flex;
+    flex-direction: column;
     overflow: hidden;
 }
 
 .screen {
-    height: 100%;
-    padding: calc(16px + var(--safe-t)) 16px calc(var(--nav-h) + 16px);
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: calc(16px + var(--safe-t)) 16px 16px;
     overflow-x: hidden;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
@@ -84,7 +78,8 @@ button:disabled { cursor: not-allowed; }
 }
 
 .screen.auth {
-    height: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
     padding: calc(24px + var(--safe-t)) 20px calc(24px + var(--safe-b));
     display: flex;
     flex-direction: column;
@@ -544,19 +539,13 @@ button.expense-row:active {
 }
 
 .nav {
-    position: fixed;
-    left: 50%;
-    bottom: 0;
-    transform: translateX(-50%);
-    width: min(430px, 100%);
-    height: var(--nav-h);
-    background: rgba(255, 255, 255, 0.92);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    flex: 0 0 auto;
+    width: 100%;
+    background: #ffffff;
     border-top: 1px solid var(--line);
     display: grid;
     grid-template-columns: repeat(5, 1fr);
-    padding: 6px 4px var(--safe-b);
+    padding: 8px 4px calc(8px + var(--safe-b));
     z-index: 20;
 }
 
@@ -930,7 +919,8 @@ button.expense-row:active {
 }
 
 .boot {
-    height: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
     display: grid;
     place-items: center;
     padding: 40px 24px;
@@ -960,7 +950,7 @@ button.expense-row:active {
 .hidden { display: none !important; }
 
 @media (min-width: 480px) {
-    body { background: #dbe1e8; }
+    html, body { background: #dbe1e8; }
     .app {
         box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.06), var(--shadow-lg);
     }

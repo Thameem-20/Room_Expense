@@ -1,13 +1,9 @@
-const CACHE = "roomtab-v25";
+const CACHE = "roomtab-v26";
 const SHELL = [
-    "./",
-    "./index.php",
-    "./assets/css/app.css",
-    "./assets/js/app.js",
-    "./assets/js/pwa.js",
     "./manifest.webmanifest",
     "./icons/icon-192.png",
-    "./icons/icon-512.png"
+    "./icons/icon-512.png",
+    "./icons/apple-touch-icon.png"
 ];
 
 self.addEventListener("install", (event) => {
@@ -33,6 +29,15 @@ self.addEventListener("fetch", (event) => {
         event.respondWith(fetch(event.request));
         return;
     }
+
+    const live = /\.(?:php|css|js|webmanifest)$/i.test(url.pathname) || url.pathname.endsWith("/");
+    if (live) {
+        event.respondWith(
+            fetch(event.request, { cache: "no-store" }).catch(() => caches.match(event.request))
+        );
+        return;
+    }
+
     event.respondWith(
         fetch(event.request).then((response) => {
             const copy = response.clone();

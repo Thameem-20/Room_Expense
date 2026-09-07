@@ -14,7 +14,9 @@ $csrf = $_SESSION['csrf'];
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#0f172a">
     <title>RoomTab Admin</title>
-    <link rel="icon" type="image/png" sizes="192x192" href="<?= htmlspecialchars($base) ?>/icons/icon-192.png">
+    <link rel="icon" href="<?= htmlspecialchars($base) ?>/favicon.ico" sizes="any">
+    <link rel="icon" type="image/png" sizes="32x32" href="<?= htmlspecialchars($base) ?>/icons/favicon-32.png?v=1">
+    <link rel="icon" type="image/png" sizes="192x192" href="<?= htmlspecialchars($base) ?>/icons/icon-192.png?v=1">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">

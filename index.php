@@ -24,20 +24,13 @@ $title = APP_NAME;
     <title><?= htmlspecialchars($title) ?></title>
     <link rel="manifest" href="<?= htmlspecialchars($base) ?>/manifest.webmanifest">
     <link rel="apple-touch-icon" href="<?= htmlspecialchars($base) ?>/icons/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="192x192" href="<?= htmlspecialchars($base) ?>/icons/icon-192.png">
+    <link rel="icon" href="<?= htmlspecialchars($base) ?>/favicon.ico" sizes="any">
+    <link rel="icon" type="image/png" sizes="32x32" href="<?= htmlspecialchars($base) ?>/icons/favicon-32.png?v=1">
+    <link rel="icon" type="image/png" sizes="192x192" href="<?= htmlspecialchars($base) ?>/icons/icon-192.png?v=1">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="<?= htmlspecialchars($base) ?>/assets/css/app.css?v=22">
-    <script>
-        (function () {
-            var setH = function () {
-                document.documentElement.style.setProperty("--app-h", window.innerHeight + "px");
-            };
-            setH();
-            window.addEventListener("resize", setH);
-        })();
-    </script>
+    <link rel="stylesheet" href="<?= htmlspecialchars($base) ?>/assets/css/app.css?v=23">
 </head>
 <body>
     <div id="app" class="app"></div>
@@ -50,6 +43,6 @@ $title = APP_NAME;
         };
     </script>
     <script src="<?= htmlspecialchars($base) ?>/assets/js/app.js?v=23"></script>
-    <script src="<?= htmlspecialchars($base) ?>/assets/js/pwa.js?v=3"></script>
+    <script src="<?= htmlspecialchars($base) ?>/assets/js/pwa.js?v=4"></script>
 </body>
 </html>

@@ -2,6 +2,9 @@ DirectoryIndex index.php
 
 <IfModule mod_headers.c>
     Header set X-Content-Type-Options "nosniff"
+    <FilesMatch "\.(php|css|js|webmanifest)$">
+        Header set Cache-Control "no-cache, no-store, must-revalidate"
+    </FilesMatch>
 </IfModule>
 
 <FilesMatch "^(config\.php|generate-icons\.php)$">

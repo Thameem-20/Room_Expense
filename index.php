@@ -12,7 +12,7 @@ $title = APP_NAME;
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#0f172a">
     <meta name="color-scheme" content="light">
     <meta name="mobile-web-app-capable" content="yes">
@@ -28,7 +28,7 @@ $title = APP_NAME;
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="<?= htmlspecialchars($base) ?>/assets/css/app.css?v=20">
+    <link rel="stylesheet" href="<?= htmlspecialchars($base) ?>/assets/css/app.css?v=21">
 </head>
 <body>
     <div id="app" class="app"></div>
@@ -41,6 +41,6 @@ $title = APP_NAME;
         };
     </script>
     <script src="<?= htmlspecialchars($base) ?>/assets/js/app.js?v=23"></script>
-    <script src="<?= htmlspecialchars($base) ?>/assets/js/pwa.js"></script>
+    <script src="<?= htmlspecialchars($base) ?>/assets/js/pwa.js?v=2"></script>
 </body>
 </html>

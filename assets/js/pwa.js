@@ -12,6 +12,14 @@
         document.documentElement.style.background = "#efe6d6";
     }
 
+    const lockZoom = (event) => event.preventDefault();
+    document.addEventListener("gesturestart", lockZoom);
+    document.addEventListener("gesturechange", lockZoom);
+    document.addEventListener("gestureend", lockZoom);
+    document.addEventListener("touchmove", (event) => {
+        if (event.touches.length > 1) event.preventDefault();
+    }, { passive: false });
+
     let deferred;
     window.addEventListener("beforeinstallprompt", (event) => {
         event.preventDefault();

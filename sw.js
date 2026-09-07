@@ -1,4 +1,4 @@
-const CACHE = "roomtab-v23";
+const CACHE = "roomtab-v24";
 const SHELL = [
     "./",
     "./index.php",

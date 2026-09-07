@@ -26,16 +26,25 @@
 }
 
 * { box-sizing: border-box; }
-html, body { height: 100%; }
+
+html, body {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+    touch-action: pan-x pan-y;
+}
+
 html { background: #0b1220; }
 
 body {
     margin: 0;
+    position: fixed;
+    inset: 0;
     font-family: var(--font);
     color: var(--ink);
     background: var(--bg);
     -webkit-font-smoothing: antialiased;
-    overscroll-behavior: none;
 }
 
 body.standalone { background: var(--bg); }
@@ -46,22 +55,28 @@ button { cursor: pointer; }
 button:disabled { cursor: not-allowed; }
 
 .app {
-    min-height: 100dvh;
+    height: 100%;
     max-width: 430px;
     margin: 0 auto;
     position: relative;
     background: var(--bg);
-    overflow-x: hidden;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 .screen {
-    min-height: 100dvh;
-    padding: calc(16px + var(--safe-t)) 16px calc(var(--nav-h) + 16px);
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: calc(16px + var(--safe-t)) 16px 16px;
     overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: none;
 }
 
 .screen.auth {
-    min-height: 100dvh;
+    min-height: 0;
     padding: calc(24px + var(--safe-t)) 20px calc(24px + var(--safe-b));
     display: flex;
     flex-direction: column;
@@ -521,11 +536,9 @@ button.expense-row:active {
 }
 
 .nav {
-    position: fixed;
-    left: 50%;
-    bottom: 0;
-    transform: translateX(-50%);
-    width: min(430px, 100%);
+    position: relative;
+    flex: 0 0 auto;
+    width: 100%;
     height: var(--nav-h);
     background: rgba(255, 255, 255, 0.92);
     backdrop-filter: blur(16px);
@@ -907,7 +920,8 @@ button.expense-row:active {
 }
 
 .boot {
-    min-height: 100dvh;
+    flex: 1 1 auto;
+    min-height: 0;
     display: grid;
     place-items: center;
     padding: 40px 24px;
@@ -939,7 +953,7 @@ button.expense-row:active {
 @media (min-width: 480px) {
     body { background: #dbe1e8; }
     .app {
-        min-height: 100dvh;
+        height: 100%;
         box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.06), var(--shadow-lg);
     }
     .sheet-bg {

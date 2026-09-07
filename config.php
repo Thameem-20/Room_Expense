@@ -2,10 +2,23 @@
 
 declare(strict_types=1);
 
-const DB_HOST = 'localhost';
-const DB_USER = 'u593219986_thameemexp';
-const DB_PASS = 'hU5mX2~Q2>y';
-const DB_NAME = 'u593219986_roomexpense';
+$isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+    || (isset($_SERVER['SERVER_PORT']) && (string) $_SERVER['SERVER_PORT'] === '443')
+    || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
+
+if ($isHttps) {
+    // Production (HTTPS)
+    define('DB_HOST', 'localhost');
+    define('DB_USER', 'u593219986_thameemexp');
+    define('DB_PASS', 'hU5mX2~Q2>y');
+    define('DB_NAME', 'u593219986_roomexpense');
+} else {
+    // Local (XAMPP / HTTP)
+    define('DB_HOST', 'localhost');
+    define('DB_USER', 'root');
+    define('DB_PASS', '');
+    define('DB_NAME', 'room_expense');
+}
 
 const APP_NAME = 'RoomTab';
 const CURRENCY = 'AED';

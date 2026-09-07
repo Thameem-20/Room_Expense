@@ -133,6 +133,35 @@
         if (!state.tab) state.tab = "home";
     }
 
+    let refreshSeq = 0;
+
+    async function refreshApp(tab) {
+        const next = tab || state.tab || "home";
+        state.tab = next;
+        state.sheet = null;
+        document.body.classList.remove("modal-open");
+        if (next === "home") state.page.recent = 1;
+        if (next === "history") {
+            state.page.expenses = 1;
+            state.page.settled = 1;
+        }
+        if (next === "bath") state.page.bath = 1;
+        render();
+        document.querySelector(".screen")?.scrollTo(0, 0);
+        const seq = ++refreshSeq;
+        try {
+            const data = await api("bootstrap", {}, "GET");
+            if (seq !== refreshSeq) return;
+            applyAuth(data);
+            if (state.view === "app") state.tab = next;
+            render();
+            document.querySelector(".screen")?.scrollTo(0, 0);
+        } catch (err) {
+            if (seq !== refreshSeq) return;
+            toast(err.message);
+        }
+    }
+
     async function boot() {
         try {
             const data = await api("bootstrap", {}, "GET");
@@ -902,8 +931,7 @@
 
         document.querySelectorAll("[data-tab]").forEach((btn) => {
             btn.onclick = () => {
-                state.tab = btn.dataset.tab;
-                render();
+                refreshApp(btn.dataset.tab);
             };
         });
 

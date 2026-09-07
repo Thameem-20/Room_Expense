@@ -12,14 +12,14 @@ $csrf = $_SESSION['csrf'];
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="theme-color" content="#1A1612">
+    <meta name="theme-color" content="#0f172a">
     <title>RoomTab Admin</title>
     <link rel="icon" type="image/png" sizes="192x192" href="<?= htmlspecialchars($base) ?>/icons/icon-192.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,680&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="<?= htmlspecialchars($base) ?>/assets/css/app.css?v=10">
-    <link rel="stylesheet" href="<?= htmlspecialchars($base) ?>/assets/css/admin.css?v=2">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="<?= htmlspecialchars($base) ?>/assets/css/app.css?v=15">
+    <link rel="stylesheet" href="<?= htmlspecialchars($base) ?>/assets/css/admin.css?v=4">
 </head>
 <body class="admin-body">
     <div id="admin-app" class="admin-app"></div>
@@ -29,6 +29,6 @@ $csrf = $_SESSION['csrf'];
             csrf: <?= json_encode($csrf) ?>
         };
     </script>
-    <script src="<?= htmlspecialchars($base) ?>/assets/js/admin.js?v=2"></script>
+    <script src="<?= htmlspecialchars($base) ?>/assets/js/admin.js?v=4"></script>
 </body>
 </html>

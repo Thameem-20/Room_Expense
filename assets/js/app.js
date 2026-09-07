@@ -9,6 +9,8 @@
         error: "",
         toast: "",
         sheet: null,
+        busy: false,
+        showPass: false,
         authMode: "login",
         roomMode: "create",
         form: {
@@ -58,6 +60,19 @@
                 render();
             }
         }, 2400);
+    }
+
+    function closeSheet() {
+        state.sheet = null;
+        state.busy = false;
+        document.body.classList.remove("modal-open");
+        render();
+    }
+
+    function openSheet(sheet) {
+        state.sheet = sheet;
+        document.body.classList.add("modal-open");
+        render();
     }
 
     function parseDate(iso) {
@@ -118,6 +133,9 @@
             state.error = err.message;
         }
         render();
+        if (state.view === "auth") {
+            setTimeout(() => document.getElementById("username")?.focus(), 50);
+        }
     }
 
     function iconNav(name) {
@@ -131,76 +149,110 @@
         return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${paths[name]}</svg>`;
     }
 
+    function modalShell(title, body, { subtitle = "", center = false, wide = false } = {}) {
+        return `
+            <div class="sheet-bg${center ? " center" : ""}" id="sheet" role="dialog" aria-modal="true" aria-label="${esc(title)}">
+                <div class="sheet${wide ? " wide" : ""}">
+                    <div class="handle"></div>
+                    <div class="modal-head">
+                        <div>
+                            <h2>${title}</h2>
+                            ${subtitle ? `<p class="hint" style="margin:8px 0 0">${subtitle}</p>` : ""}
+                        </div>
+                        <button type="button" class="modal-close" id="cancel-sheet" aria-label="Close">×</button>
+                    </div>
+                    ${body}
+                </div>
+            </div>
+        `;
+    }
+
+    function eyeIcon(open) {
+        if (open) {
+            return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12s3.5-7 9-7 9 7 9 7-3.5 7-9 7-9-7-9-7z"/><circle cx="12" cy="12" r="3"/></svg>`;
+        }
+        return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18M10.6 10.6A3 3 0 0 0 12 15a3 3 0 0 0 2.4-1.2M9.9 5.1A10.4 10.4 0 0 1 12 5c5.5 0 9 7 9 7a17.6 17.6 0 0 1-3.1 4.1M6.1 6.1C4 7.8 3 12 3 12a17.5 17.5 0 0 0 6.4 5.7"/></svg>`;
+    }
+
     function renderAuth() {
+        const showPass = !!state.showPass;
         return `
             <section class="screen auth">
-                <div class="brand">
-                    <div class="brand-mark">R</div>
-                    <h1>${esc(cfg.name)}</h1>
-                    <p>Log in with the username and password your room admin gave you.</p>
+                <div class="auth-card">
+                    <div class="auth-brand">
+                        <div class="brand-mark">R</div>
+                        <h1>${esc(cfg.name)}</h1>
+                    </div>
+                    ${state.error ? `<div class="error">${esc(state.error)}</div>` : ""}
+                    <div class="field">
+                        <label for="username">Username</label>
+                        <input id="username" type="text" placeholder="e.g. ali_305" value="${esc(state.form.username)}" autocomplete="username" autocapitalize="none" spellcheck="false">
+                    </div>
+                    <div class="field">
+                        <label for="password">Password</label>
+                        <div class="input-wrap">
+                            <input id="password" class="has-toggle" type="${showPass ? "text" : "password"}" placeholder="Your password" value="${esc(state.form.password)}" autocomplete="current-password">
+                            <button type="button" class="toggle-pass" id="toggle-pass" aria-label="${showPass ? "Hide password" : "Show password"}">${eyeIcon(showPass)}</button>
+                        </div>
+                    </div>
+                    <button class="btn accent" id="auth-submit" style="margin-top:8px">Sign in</button>
                 </div>
-                ${state.error ? `<div class="error">${esc(state.error)}</div>` : ""}
-                <div class="field">
-                    <label>Username</label>
-                    <input id="username" type="text" placeholder="ali_305" value="${esc(state.form.username)}" autocomplete="username">
-                </div>
-                <div class="field">
-                    <label>Password</label>
-                    <input id="password" type="password" placeholder="Your password" value="${esc(state.form.password)}" autocomplete="current-password">
-                </div>
-                <div style="flex:1"></div>
-                <button class="btn" id="auth-submit" style="margin-top:18px">Log in</button>
             </section>
         `;
     }
 
     function renderSetup() {
+        const showPass = !!state.showPass;
         return `
             <section class="screen auth">
-                <div class="brand">
-                    <div class="brand-mark">R</div>
-                    <h1>Set up</h1>
-                    <p>Create the admin login and the first room. After this, only you can add people.</p>
+                <div class="auth-card">
+                    <div class="auth-brand">
+                        <div class="brand-mark">R</div>
+                        <h1>Set up RoomTab</h1>
+                        <p>Create the admin login and your first room.</p>
+                    </div>
+                    ${state.error ? `<div class="error">${esc(state.error)}</div>` : ""}
+                    <div class="field">
+                        <label for="display-name">Your name</label>
+                        <input id="display-name" type="text" placeholder="Ali" value="${esc(state.form.displayName)}" autocomplete="name">
+                    </div>
+                    <div class="field">
+                        <label for="username">Admin username</label>
+                        <input id="username" type="text" placeholder="ali_305" value="${esc(state.form.username)}" autocomplete="username" autocapitalize="none" spellcheck="false">
+                    </div>
+                    <div class="field">
+                        <label for="password">Admin password</label>
+                        <div class="input-wrap">
+                            <input id="password" class="has-toggle" type="${showPass ? "text" : "password"}" placeholder="Choose a password" value="${esc(state.form.password)}" autocomplete="new-password">
+                            <button type="button" class="toggle-pass" id="toggle-pass" aria-label="${showPass ? "Hide password" : "Show password"}">${eyeIcon(showPass)}</button>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label for="room-name">Room name</label>
+                        <input id="room-name" type="text" placeholder="Room 305" value="${esc(state.form.name)}" autocomplete="off">
+                    </div>
+                    <div class="field">
+                        <label for="room-pin">Room PIN</label>
+                        <input id="room-pin" type="password" inputmode="numeric" maxlength="6" placeholder="4–6 digits" value="${esc(state.form.pin)}">
+                    </div>
+                    <div class="field">
+                        <label>Roommates</label>
+                        <div class="chips">${state.membersDraft.map((m, i) => `
+                            <span class="chip">${esc(m.name)} · @${esc(m.username)} <button data-remove="${i}" type="button">×</button></span>
+                        `).join("")}</div>
+                    </div>
+                    <div class="field">
+                        <input id="member-name" type="text" placeholder="Display name" value="${esc(state.form.memberName)}">
+                    </div>
+                    <div class="field">
+                        <input id="member-user" type="text" placeholder="Username" value="${esc(state.form.memberUser)}" autocomplete="off" autocapitalize="none">
+                    </div>
+                    <div class="chip-add">
+                        <input id="member-pass" type="password" placeholder="Password" value="${esc(state.form.memberPass)}" autocomplete="new-password">
+                        <button class="btn small" id="add-member-draft" type="button">Add</button>
+                    </div>
+                    <button class="btn accent" id="setup-submit" style="margin-top:16px">Create room</button>
                 </div>
-                ${state.error ? `<div class="error">${esc(state.error)}</div>` : ""}
-                <div class="field">
-                    <label>Your name</label>
-                    <input id="display-name" type="text" placeholder="Ali" value="${esc(state.form.displayName)}" autocomplete="name">
-                </div>
-                <div class="field">
-                    <label>Admin username</label>
-                    <input id="username" type="text" placeholder="ali_305" value="${esc(state.form.username)}" autocomplete="username">
-                </div>
-                <div class="field">
-                    <label>Admin password</label>
-                    <input id="password" type="password" placeholder="Your password" value="${esc(state.form.password)}" autocomplete="new-password">
-                </div>
-                <div class="field">
-                    <label>Room name</label>
-                    <input id="room-name" type="text" placeholder="Room 305" value="${esc(state.form.name)}" autocomplete="off">
-                </div>
-                <div class="field">
-                    <label>Room PIN</label>
-                    <input id="room-pin" type="password" inputmode="numeric" maxlength="6" placeholder="4–6 digits" value="${esc(state.form.pin)}">
-                </div>
-                <div class="field">
-                    <label>Roommates</label>
-                    <div class="chips">${state.membersDraft.map((m, i) => `
-                        <span class="chip">${esc(m.name)} · @${esc(m.username)} <button data-remove="${i}" type="button">×</button></span>
-                    `).join("")}</div>
-                </div>
-                <div class="field">
-                    <input id="member-name" type="text" placeholder="Display name" value="${esc(state.form.memberName)}">
-                </div>
-                <div class="field">
-                    <input id="member-user" type="text" placeholder="Username" value="${esc(state.form.memberUser)}" autocomplete="off">
-                </div>
-                <div class="chip-add">
-                    <input id="member-pass" type="password" placeholder="Password" value="${esc(state.form.memberPass)}" autocomplete="new-password">
-                    <button class="btn small" id="add-member-draft" type="button">Add</button>
-                </div>
-                <div style="flex:1"></div>
-                <button class="btn" id="setup-submit" style="margin-top:18px">Create room</button>
             </section>
         `;
     }
@@ -209,12 +261,14 @@
         const who = state.user?.name || "you";
         return `
             <section class="screen auth">
-                <div class="brand">
-                    <p class="eyebrow">Signed in as ${esc(who)}</p>
-                    <h1>No room yet</h1>
-                    <p>Ask the room admin to add you. You cannot join or sign up on your own.</p>
+                <div class="auth-card">
+                    <div class="auth-brand">
+                        <div class="brand-mark">${esc((who || "R").slice(0, 1).toUpperCase())}</div>
+                        <h1>No room yet</h1>
+                        <p>Signed in as ${esc(who)}. Ask your admin to add you to a room.</p>
+                    </div>
+                    <button class="btn ghost" id="logout">Log out</button>
                 </div>
-                <button class="btn ghost" id="logout">Log out</button>
             </section>
         `;
     }
@@ -264,7 +318,7 @@
                         <div class="eyebrow">${esc(d.room.name)}</div>
                         <h1>Hey, ${esc(me.name)}</h1>
                     </div>
-                    <button class="avatar" id="switch-me">${esc(me.name.slice(0,1).toUpperCase())}</button>
+                    <button class="avatar" id="switch-me" aria-label="Account">${esc(me.name.slice(0,1).toUpperCase())}</button>
                 </div>
                 <div class="balance">
                     <small>${heading}</small>
@@ -286,10 +340,16 @@
                 </div>
                 <div class="section-head"><h2>Recent</h2></div>
                 <div class="list">
-                    ${recent.items.length ? recent.items.map(expenseRow).join("") : `<div class="empty">No expenses yet. Tap toothpaste or water to start.</div>`}
+                    ${recent.items.length ? recent.items.map(expenseRow).join("") : `
+                        <div class="empty">
+                            <strong>No expenses yet</strong>
+                            Tap a quick item above, or use + to log something new.
+                        </div>
+                    `}
                 </div>
                 ${pager("recent", recent)}
             </section>
+            <button class="fab" data-new-item="1" aria-label="Add expense">＋</button>
         `;
     }
 
@@ -308,6 +368,8 @@
 
     function renderPeople() {
         const d = state.data;
+        const owed = d.members.filter((m) => m.is_owed).length;
+        const owing = d.members.filter((m) => m.owes).length;
         return `
             <section class="screen">
                 <div class="top">
@@ -316,12 +378,16 @@
                         <h1>Roommates</h1>
                     </div>
                 </div>
+                <div class="stat-row">
+                    <div class="stat"><small>Owed</small><b>${owed}</b></div>
+                    <div class="stat"><small>Owing</small><b>${owing}</b></div>
+                </div>
                 <div class="list">
                     ${d.members.map((m) => `
                         <article class="row member-row">
                             <div class="avatar">${esc(m.name.slice(0,1).toUpperCase())}</div>
                             <div class="meta">
-                                <b>${esc(m.name)}${m.id === d.me.id ? " · you" : ""}${m.is_admin ? " · admin" : ""}</b>
+                                <b>${esc(m.name)}${m.id === d.me.id ? '<span class="badge">you</span>' : ""}${m.is_admin ? '<span class="badge admin">admin</span>' : ""}</b>
                                 <small>${m.username ? "@" + esc(m.username) + " · " : ""}${esc(m.label)}</small>
                             </div>
                             <div class="member-side">
@@ -355,9 +421,9 @@
                         <span>Top of the list cleans. Mark done to pass it to the next person.</span>
                         <button class="btn" id="bath-done">Mark ${esc(current.name)} done</button>
                     </div>
-                ` : `<div class="empty">Add roommates to start the cleaning order.</div>`}
+                ` : `<div class="empty"><strong>No order yet</strong>Add roommates to start the cleaning rotation.</div>`}
                 <div class="section-head"><h2>Cleaning order</h2></div>
-                <p style="color:var(--muted);font-size:13px;margin:-4px 2px 12px">Hold the dots and drag, or use the arrows. Move someone down if they are away.</p>
+                <p class="hint">Hold the dots and drag, or use the arrows. Move someone down if they are away.</p>
                 <div class="list" id="bath-list">
                     ${bath.order.map((m) => `
                         <article class="row bath-row ${m.is_current ? "current" : ""}" data-bath-id="${m.id}">
@@ -365,7 +431,7 @@
                             <div class="pos">${m.position}</div>
                             <div class="avatar">${esc(m.name.slice(0,1).toUpperCase())}</div>
                             <div class="meta">
-                                <b>${esc(m.name)}${m.id === d.me.id ? " · you" : ""}</b>
+                                <b>${esc(m.name)}${m.id === d.me.id ? '<span class="badge">you</span>' : ""}</b>
                                 <small>${m.is_current ? "Cleans this week" : "Up next"}</small>
                             </div>
                             <div class="stepper">
@@ -409,11 +475,11 @@
                             <div class="meta"><b>${esc(p.from)} → ${esc(p.to)}</b><small>To settle up</small></div>
                             <div class="amt">${money(p.amount)}</div>
                         </article>
-                    `).join("") : `<div class="empty">Everyone is settled up.</div>`}
+                    `).join("") : `<div class="empty"><strong>All clear</strong>Everyone is settled up.</div>`}
                 </div>
                 <div class="section-head" style="margin-top:22px"><h2>All expenses</h2></div>
                 <div class="list">
-                    ${expenses.items.length ? expenses.items.map(expenseRow).join("") : `<div class="empty">Nothing logged yet.</div>`}
+                    ${expenses.items.length ? expenses.items.map(expenseRow).join("") : `<div class="empty"><strong>Nothing logged yet</strong>Add an expense from Home or Add.</div>`}
                 </div>
                 ${pager("expenses", expenses)}
                 ${settled.total ? `
@@ -434,11 +500,29 @@
     }
 
     function renderAdd() {
+        const items = (state.data?.items || []).filter((item) => item.is_quick);
         return `
             <section class="screen">
                 <div class="top"><div><div class="eyebrow">Manual</div><h1>New expense</h1></div></div>
-                <p style="color:var(--muted);margin-bottom:16px">Add something that is not in quick add. Pick an emoji as the icon.</p>
-                <button class="btn" data-new-item="1">Create item & add</button>
+                <div class="add-panel">
+                    <h2>Custom item</h2>
+                    <p class="hint">Name it, pick an emoji, then log the first amount in a popup.</p>
+                    <button class="btn" data-new-item="1">Create &amp; add expense</button>
+                </div>
+                ${items.length ? `
+                    <div class="section-head"><h2>Or pick existing</h2></div>
+                    <div class="pick-grid">
+                        ${items.map((item) => `
+                            <button class="pick" data-quick="${item.id}">
+                                <div class="emo" style="width:44px;height:44px;border-radius:14px;background:var(--card-2);display:grid;place-items:center;font-size:22px">${item.emoji}</div>
+                                <div>
+                                    <b>${esc(item.name)}</b>
+                                    <small>${item.last_amount ? "Last " + money(item.last_amount) : "Tap to add"}</small>
+                                </div>
+                            </button>
+                        `).join("")}
+                    </div>
+                ` : ""}
             </section>
         `;
     }
@@ -446,89 +530,79 @@
     function sheetExpense(item) {
         const members = state.data.members;
         const me = state.data.me.id;
-        const prefill = item.last_amount || "";
-        return `
-            <div class="sheet-bg" id="sheet">
-                <div class="sheet">
-                    <div class="handle"></div>
-                    <h2>${item.emoji} ${esc(item.name)}</h2>
-                    <p style="color:var(--muted);margin:6px 0 16px">Split across all ${members.length} roommates</p>
-                    <div class="field">
-                        <label>Amount (${cfg.currency})</label>
-                        <input id="exp-amount" type="number" inputmode="decimal" step="0.01" min="0" value="${esc(prefill)}" placeholder="10.00">
-                    </div>
-                    <label>Who paid</label>
-                    <div class="payers">
-                        ${members.map((m) => `<button type="button" class="${m.id === me ? "on" : ""}" data-payer="${m.id}">${esc(m.name)}</button>`).join("")}
-                    </div>
-                    <button class="btn" id="save-expense" data-item="${item.id || ""}">Add expense</button>
-                </div>
+        const prefill = state.sheet.amount ?? item.last_amount ?? "";
+        const payer = state.sheet.payer || me;
+        const body = `
+            <p class="hint">Split across all ${members.length} roommates</p>
+            <div class="field">
+                <label>Amount (${cfg.currency})</label>
+                <input id="exp-amount" type="number" inputmode="decimal" step="0.01" min="0" value="${esc(prefill)}" placeholder="10.00" autofocus>
+            </div>
+            <label>Who paid</label>
+            <div class="payers">
+                ${members.map((m) => `<button type="button" class="${m.id === payer ? "on" : ""}" data-payer="${m.id}">${esc(m.name)}</button>`).join("")}
+            </div>
+            <div class="modal-actions">
+                <button class="btn${state.busy ? " loading" : ""}" id="save-expense" data-item="${item.id || ""}" ${state.busy ? "disabled" : ""}>Add expense</button>
             </div>
         `;
+        return modalShell(`${item.emoji} ${esc(item.name)}`, body);
     }
 
     function sheetNewItem() {
         const members = state.data.members;
         const me = state.data.me.id;
         const selected = state.sheet.emoji || "🛒";
-        return `
-            <div class="sheet-bg" id="sheet">
-                <div class="sheet">
-                    <div class="handle"></div>
-                    <h2>New item</h2>
-                    <p style="color:var(--muted);margin:6px 0 16px">Name it, give it an emoji, then log the first expense.</p>
-                    <div class="field">
-                        <label>Item name</label>
-                        <input id="item-name" type="text" placeholder="Colgate" value="${esc(state.sheet.title || "")}">
-                    </div>
-                    <label>Emoji icon</label>
-                    <div class="emoji-grid">
-                        ${Array.from(new Set(["🛒", ...ICONS])).map((e) => `
-                            <button type="button" class="${e === selected ? "on" : ""}" data-emoji="${e}">${e}</button>
-                        `).join("")}
-                    </div>
-                    <div class="field">
-                        <label>Amount (${cfg.currency})</label>
-                        <input id="exp-amount" type="number" inputmode="decimal" step="0.01" min="0" placeholder="10.00" value="${esc(state.sheet.amount || "")}">
-                    </div>
-                    <label>Who paid</label>
-                    <div class="payers">
-                        ${members.map((m) => `<button type="button" class="${m.id === me ? "on" : ""}" data-payer="${m.id}">${esc(m.name)}</button>`).join("")}
-                    </div>
-                    <button class="btn" id="save-new-item">Add expense</button>
-                </div>
+        const payer = state.sheet.payer || me;
+        const body = `
+            <p class="hint">Name it, give it an emoji, then log the first expense.</p>
+            <div class="field">
+                <label>Item name</label>
+                <input id="item-name" type="text" placeholder="Colgate" value="${esc(state.sheet.title || "")}">
+            </div>
+            <label>Emoji icon</label>
+            <div class="emoji-grid">
+                ${Array.from(new Set(["🛒", ...ICONS])).map((e) => `
+                    <button type="button" class="${e === selected ? "on" : ""}" data-emoji="${e}">${e}</button>
+                `).join("")}
+            </div>
+            <div class="field">
+                <label>Amount (${cfg.currency})</label>
+                <input id="exp-amount" type="number" inputmode="decimal" step="0.01" min="0" placeholder="10.00" value="${esc(state.sheet.amount || "")}">
+            </div>
+            <label>Who paid</label>
+            <div class="payers">
+                ${members.map((m) => `<button type="button" class="${m.id === payer ? "on" : ""}" data-payer="${m.id}">${esc(m.name)}</button>`).join("")}
+            </div>
+            <div class="modal-actions">
+                <button class="btn${state.busy ? " loading" : ""}" id="save-new-item" ${state.busy ? "disabled" : ""}>Add expense</button>
             </div>
         `;
+        return modalShell("New item", body);
     }
 
     function sheetAccount() {
         const me = state.data?.me || {};
         const user = state.user || {};
-        return `
-            <div class="sheet-bg" id="sheet">
-                <div class="sheet">
-                    <div class="handle"></div>
-                    <h2>${esc(me.name || user.name || "Account")}</h2>
-                    <p style="color:var(--muted);margin:8px 0 18px">@${esc(me.username || user.username || "")} · stays signed in on this device</p>
-                    <button class="btn ghost" id="logout">Log out</button>
-                    <button class="btn ghost" id="cancel-sheet" style="margin-top:8px">Close</button>
-                </div>
+        const body = `
+            <p class="hint">@${esc(me.username || user.username || "")} · stays signed in on this device</p>
+            <div class="modal-actions">
+                <button class="btn ghost" id="logout">Log out</button>
             </div>
         `;
+        return modalShell(esc(me.name || user.name || "Account"), body, { center: true });
     }
 
     function sheetSettle(member) {
-        return `
-            <div class="sheet-bg" id="sheet">
-                <div class="sheet">
-                    <div class="handle"></div>
-                    <h2>Settle ${esc(member.name)}</h2>
-                    <p style="color:var(--muted);margin:8px 0 18px">${esc(member.name)} currently owes ${money(member.pending)}. After payment, this clears their pending amount.</p>
-                    <button class="btn settle" id="confirm-settle" data-settle-confirm="${member.id}">Mark as paid</button>
-                    <button class="btn ghost" id="cancel-sheet" style="margin-top:8px">Cancel</button>
-                </div>
+        const body = `
+            <div class="confirm-icon ok">✓</div>
+            <p class="hint" style="margin-top:0">${esc(member.name)} currently owes ${money(member.pending)}. After payment, this clears their pending amount.</p>
+            <div class="modal-actions">
+                <button class="btn settle${state.busy ? " loading" : ""}" id="confirm-settle" data-settle-confirm="${member.id}" ${state.busy ? "disabled" : ""}>Mark as paid</button>
+                <button class="btn ghost" id="cancel-sheet">Cancel</button>
             </div>
         `;
+        return modalShell(`Settle ${esc(member.name)}`, body, { center: true });
     }
 
     function renderNav() {
@@ -553,7 +627,11 @@
     }
 
     function renderSheet() {
-        if (!state.sheet) return "";
+        if (!state.sheet) {
+            document.body.classList.remove("modal-open");
+            return "";
+        }
+        document.body.classList.add("modal-open");
         if (state.sheet.type === "expense") return sheetExpense(state.sheet.item);
         if (state.sheet.type === "new") return sheetNewItem();
         if (state.sheet.type === "settle") return sheetSettle(state.sheet.member);
@@ -563,7 +641,9 @@
 
     function render() {
         let body = "";
-        if (state.view === "boot") body = `<section class="screen"><p class="empty">Opening room…</p></section>`;
+        if (state.view === "boot") {
+            body = `<section class="boot"><div class="boot-mark">R</div><p class="empty" style="border:0;background:transparent;padding:0">Opening room…</p></section>`;
+        }
         if (state.view === "auth") body = renderAuth();
         if (state.view === "setup") body = renderSetup();
         if (state.view === "noroom") body = renderNoRoom();
@@ -601,6 +681,7 @@
         state.view = "auth";
         state.tab = "home";
         state.sheet = null;
+        state.busy = false;
         state.membersDraft = [];
         state.page = { recent: 1, expenses: 1, settled: 1, bath: 1 };
         state.form = {
@@ -613,6 +694,7 @@
             memberUser: "",
             memberPass: ""
         };
+        document.body.classList.remove("modal-open");
     }
 
     function currentPayer() {
@@ -620,7 +702,26 @@
         return on ? Number(on.dataset.payer) : state.data.me.id;
     }
 
+    function captureSheetDraft() {
+        if (!state.sheet) return;
+        const name = document.getElementById("item-name");
+        const amount = document.getElementById("exp-amount");
+        if (name) state.sheet.title = name.value;
+        if (amount) state.sheet.amount = amount.value;
+        state.sheet.payer = currentPayer();
+    }
+
     function bind() {
+        const togglePass = document.getElementById("toggle-pass");
+        if (togglePass) {
+            togglePass.onclick = () => {
+                readAuthForm();
+                state.showPass = !state.showPass;
+                render();
+                document.getElementById("password")?.focus();
+            };
+        }
+
         document.querySelectorAll("[data-auth-mode]").forEach((btn) => {
             btn.onclick = () => {
                 readAuthForm();
@@ -693,6 +794,8 @@
             submit.onclick = async () => {
                 readAuthForm();
                 state.error = "";
+                submit.classList.add("loading");
+                submit.disabled = true;
                 try {
                     const data = await api("login", {
                         username: state.form.username,
@@ -712,6 +815,8 @@
             setupSubmit.onclick = async () => {
                 readAuthForm();
                 state.error = "";
+                setupSubmit.classList.add("loading");
+                setupSubmit.disabled = true;
                 try {
                     const data = await api("setup", {
                         name: state.form.displayName,
@@ -757,6 +862,8 @@
         const bathDone = document.getElementById("bath-done");
         if (bathDone) {
             bathDone.onclick = async () => {
+                bathDone.classList.add("loading");
+                bathDone.disabled = true;
                 try {
                     const data = await api("bathroom_complete");
                     applyRoom(data);
@@ -766,6 +873,7 @@
                     toast(next ? `Next up: ${next}` : "Bathroom marked done");
                 } catch (err) {
                     toast(err.message);
+                    render();
                 }
             };
         }
@@ -841,25 +949,22 @@
         document.querySelectorAll("[data-quick]").forEach((btn) => {
             btn.onclick = () => {
                 const item = state.data.items.find((i) => String(i.id) === btn.dataset.quick);
-                state.sheet = { type: "expense", item, payer: state.data.me.id };
-                render();
-                setTimeout(() => document.getElementById("exp-amount")?.focus(), 50);
+                openSheet({ type: "expense", item, payer: state.data.me.id });
+                setTimeout(() => document.getElementById("exp-amount")?.focus(), 80);
             };
         });
 
         document.querySelectorAll("[data-new-item]").forEach((btn) => {
             btn.onclick = () => {
-                state.sheet = { type: "new", emoji: "🛒", title: "" };
-                state.tab = "home";
-                render();
+                openSheet({ type: "new", emoji: "🛒", title: "", amount: "", payer: state.data.me.id });
+                setTimeout(() => document.getElementById("item-name")?.focus(), 80);
             };
         });
 
         document.querySelectorAll("[data-emoji]").forEach((btn) => {
             btn.onclick = () => {
+                captureSheetDraft();
                 state.sheet.emoji = btn.dataset.emoji;
-                state.sheet.title = document.getElementById("item-name")?.value || "";
-                state.sheet.amount = document.getElementById("exp-amount")?.value || "";
                 render();
             };
         });
@@ -867,91 +972,112 @@
         document.querySelectorAll("[data-payer]").forEach((btn) => {
             btn.onclick = () => {
                 document.querySelectorAll("[data-payer]").forEach((b) => b.classList.toggle("on", b === btn));
+                if (state.sheet) state.sheet.payer = Number(btn.dataset.payer);
             };
         });
 
         const saveExp = document.getElementById("save-expense");
         if (saveExp) {
-            saveExp.onclick = async () => {
-                const amount = document.getElementById("exp-amount").value;
+            const save = async () => {
+                if (state.busy) return;
+                captureSheetDraft();
+                const amount = state.sheet.amount;
+                const itemId = Number(saveExp.dataset.item);
+                const paidBy = currentPayer();
+                state.busy = true;
+                saveExp.classList.add("loading");
+                saveExp.disabled = true;
                 try {
                     const data = await api("add_expense", {
-                        item_id: Number(saveExp.dataset.item),
+                        item_id: itemId,
                         amount,
-                        paid_by: currentPayer()
+                        paid_by: paidBy
                     });
                     applyRoom(data);
                     state.page.recent = 1;
                     state.page.expenses = 1;
                     state.sheet = null;
+                    state.busy = false;
+                    document.body.classList.remove("modal-open");
                     toast("Expense added and split");
                     render();
                 } catch (err) {
+                    state.busy = false;
                     toast(err.message);
+                    render();
                 }
             };
+            saveExp.onclick = save;
+            document.getElementById("exp-amount")?.addEventListener("keydown", (e) => {
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                    save();
+                }
+            });
         }
 
         const saveNew = document.getElementById("save-new-item");
         if (saveNew) {
-            saveNew.onclick = async () => {
+            const save = async () => {
+                if (state.busy) return;
+                captureSheetDraft();
+                const title = state.sheet.title;
+                const emoji = state.sheet.emoji;
+                const amount = state.sheet.amount;
+                const paidBy = currentPayer();
+                state.busy = true;
+                saveNew.classList.add("loading");
+                saveNew.disabled = true;
                 try {
                     const data = await api("add_expense", {
-                        title: document.getElementById("item-name").value,
-                        emoji: state.sheet.emoji,
-                        amount: document.getElementById("exp-amount").value,
-                        paid_by: currentPayer()
+                        title,
+                        emoji,
+                        amount,
+                        paid_by: paidBy
                     });
                     applyRoom(data);
                     state.page.recent = 1;
                     state.page.expenses = 1;
                     state.sheet = null;
+                    state.busy = false;
+                    document.body.classList.remove("modal-open");
                     toast("New item saved");
                     render();
                 } catch (err) {
+                    state.busy = false;
                     toast(err.message);
+                    render();
                 }
             };
+            saveNew.onclick = save;
         }
 
         document.querySelectorAll("[data-settle]").forEach((btn) => {
             btn.onclick = () => {
                 const member = state.data.members.find((m) => String(m.id) === btn.dataset.settle);
-                state.sheet = { type: "settle", member };
-                render();
+                openSheet({ type: "settle", member });
             };
         });
 
         const confirmSettle = document.getElementById("confirm-settle");
         if (confirmSettle) {
             confirmSettle.onclick = async () => {
+                if (state.busy) return;
+                state.busy = true;
+                render();
                 try {
                     const data = await api("settle", { member_id: Number(confirmSettle.dataset.settleConfirm) });
                     applyRoom(data);
                     state.page.settled = 1;
                     state.sheet = null;
+                    state.busy = false;
+                    document.body.classList.remove("modal-open");
                     toast("Pending amount cleared");
                     render();
                 } catch (err) {
+                    state.busy = false;
                     toast(err.message);
-                }
-            };
-        }
-
-        const addPerson = document.getElementById("add-person");
-        if (addPerson) {
-            addPerson.onclick = async () => {
-                try {
-                    const data = await api("add_member", {
-                        name: document.getElementById("new-person-name").value.trim(),
-                        username: document.getElementById("new-person-user").value.trim(),
-                        password: document.getElementById("new-person-pass").value
-                    });
-                    applyRoom(data);
-                    toast("Roommate added");
                     render();
-                } catch (err) {
-                    toast(err.message);
                 }
             };
         }
@@ -985,18 +1111,14 @@
 
         const switchMe = document.getElementById("switch-me");
         if (switchMe) {
-            switchMe.onclick = () => {
-                state.sheet = { type: "account" };
-                render();
-            };
+            switchMe.onclick = () => openSheet({ type: "account" });
         }
 
         const sheet = document.getElementById("sheet");
         if (sheet) {
             sheet.addEventListener("click", (e) => {
-                if (e.target.id === "sheet" || e.target.id === "cancel-sheet") {
-                    state.sheet = null;
-                    render();
+                if (e.target.id === "sheet" || e.target.id === "cancel-sheet" || e.target.closest("#cancel-sheet")) {
+                    closeSheet();
                 }
             });
         }
@@ -1007,6 +1129,13 @@
             installBtn.onclick = () => window.ROOMTAB.install();
         }
     }
+
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && state.sheet) {
+            e.preventDefault();
+            closeSheet();
+        }
+    });
 
     boot();
 })();

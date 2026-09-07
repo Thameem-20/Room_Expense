@@ -1,5 +1,5 @@
 .admin-body {
-    background: #d8cfc0;
+    background: #dbe1e8;
 }
 
 .admin-app {
@@ -8,6 +8,8 @@
     min-height: 100dvh;
     background: var(--bg);
     padding: calc(20px + env(safe-area-inset-top, 0px)) 20px calc(28px + env(safe-area-inset-bottom, 0px));
+    position: relative;
+    box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.06), var(--shadow);
 }
 
 .admin-top {
@@ -15,49 +17,123 @@
     align-items: flex-start;
     justify-content: space-between;
     gap: 12px;
-    margin-bottom: 22px;
+    margin-bottom: 20px;
 }
 
 .admin-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 12px;
+    gap: 10px;
 }
 
 @media (max-width: 640px) {
     .admin-grid { grid-template-columns: 1fr; }
+    .admin-app { box-shadow: none; }
 }
 
 .admin-card {
     background: var(--card);
     border: 1px solid var(--line);
-    border-radius: 20px;
+    border-radius: 16px;
     padding: 16px;
     text-align: left;
     font: inherit;
     color: inherit;
     width: 100%;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.admin-card b { display: block; font-size: 18px; }
-.admin-card small { color: var(--muted); }
+button.admin-card:hover {
+    border-color: var(--line-strong);
+    box-shadow: var(--shadow);
+}
+
+.admin-card b {
+    display: block;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.admin-card small {
+    color: var(--muted);
+    display: block;
+    margin-top: 4px;
+}
 
 .login-box {
-    max-width: 420px;
-    margin: 8vh auto 0;
+    max-width: 400px;
+    margin: 0 auto;
+    min-height: calc(100dvh - 48px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
-.admin-person {
-    align-items: center;
-}
+.admin-person { align-items: center; }
 
 .admin-actions {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    margin-top: 8px;
+    flex: none;
 }
 
-.admin-edit {
-    margin: 0 0 12px;
+.admin-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.admin-toolbar .btn {
+    width: auto;
+    min-width: 110px;
+}
+
+.admin-section {
+    margin-top: 4px;
+    margin-bottom: 10px;
+}
+
+.admin-section h2 {
+    font-size: 16px;
+}
+
+.admin-meta {
+    color: var(--muted);
+    font-size: 13px;
+    margin: 4px 0 0;
+}
+
+.admin-danger-zone {
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px dashed var(--line);
+}
+
+.admin-app .toast {
+    bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+}
+
+.admin-app .sheet-bg {
+    align-items: center;
+    padding: 24px;
+}
+
+.admin-app .sheet {
+    border-radius: 20px;
+    padding: 18px;
+    animation: modal-pop 0.28s var(--ease);
+    width: min(400px, 100%);
+}
+
+.admin-app .handle { display: none; }
+
+.admin-app .auth-card,
+.login-box .auth-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    padding: 28px 22px 22px;
+    box-shadow: var(--shadow);
 }

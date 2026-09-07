@@ -13,7 +13,7 @@ $title = APP_NAME;
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="theme-color" content="#1A1612">
+    <meta name="theme-color" content="#0f172a">
     <meta name="color-scheme" content="light">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -27,8 +27,8 @@ $title = APP_NAME;
     <link rel="icon" type="image/png" sizes="192x192" href="<?= htmlspecialchars($base) ?>/icons/icon-192.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,680&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="<?= htmlspecialchars($base) ?>/assets/css/app.css?v=13">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="<?= htmlspecialchars($base) ?>/assets/css/app.css?v=15">
 </head>
 <body>
     <div id="app" class="app"></div>
@@ -40,7 +40,7 @@ $title = APP_NAME;
             currency: <?= json_encode(CURRENCY) ?>
         };
     </script>
-    <script src="<?= htmlspecialchars($base) ?>/assets/js/app.js?v=13"></script>
+    <script src="<?= htmlspecialchars($base) ?>/assets/js/app.js?v=16"></script>
     <script src="<?= htmlspecialchars($base) ?>/assets/js/pwa.js"></script>
 </body>
 </html>

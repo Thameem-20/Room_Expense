@@ -42,7 +42,7 @@ $title = APP_NAME;
             currency: <?= json_encode(CURRENCY) ?>
         };
     </script>
-    <script src="<?= htmlspecialchars($base) ?>/assets/js/app.js?v=23"></script>
+    <script src="<?= htmlspecialchars($base) ?>/assets/js/app.js?v=24"></script>
     <script src="<?= htmlspecialchars($base) ?>/assets/js/pwa.js?v=4"></script>
 </body>
 </html>

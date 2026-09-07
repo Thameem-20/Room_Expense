@@ -9,7 +9,6 @@
     const standalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
     if (standalone) {
         document.body.classList.add("standalone");
-        document.documentElement.style.background = "#efe6d6";
     }
 
     const lockZoom = (event) => event.preventDefault();

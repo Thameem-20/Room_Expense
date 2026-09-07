@@ -201,10 +201,69 @@ function split_expense(int $expenseId, array $members, int $amountCents): void
     }
 }
 
-function fetch_expenses(int $roomId): array
+function fetch_room_expense(int $roomId, int $expenseId): array
+{
+    $stmt = db()->prepare('SELECT * FROM expenses WHERE id = ? AND room_id = ?');
+    $stmt->execute([$expenseId, $roomId]);
+    $expense = $stmt->fetch();
+    if (!$expense) {
+        throw new InvalidArgumentException('Expense not found.');
+    }
+    return $expense;
+}
+
+function assert_expense_owner(array $expense, int $memberId): void
+{
+    $owner = (int) ($expense['added_by'] ?? $expense['paid_by'] ?? 0);
+    if ($owner !== $memberId) {
+        throw new InvalidArgumentException('Only the person who added this expense can change it.');
+    }
+}
+
+function update_expense(int $roomId, int $expenseId, int $amountCents, int $paidBy, int $actorMemberId): void
+{
+    if ($amountCents < 1) {
+        throw new InvalidArgumentException('Enter an amount greater than 0.');
+    }
+    $expense = fetch_room_expense($roomId, $expenseId);
+    assert_expense_owner($expense, $actorMemberId);
+    $payerCheck = db()->prepare('SELECT id FROM members WHERE id = ? AND room_id = ?');
+    $payerCheck->execute([$paidBy, $roomId]);
+    if (!$payerCheck->fetch()) {
+        throw new InvalidArgumentException('Payer is not in this room.');
+    }
+
+    $pdo = db();
+    $pdo->beginTransaction();
+    try {
+        $pdo->prepare('UPDATE expenses SET amount_cents = ?, paid_by = ? WHERE id = ? AND room_id = ?')
+            ->execute([$amountCents, $paidBy, $expenseId, $roomId]);
+        $pdo->prepare('DELETE FROM expense_shares WHERE expense_id = ?')->execute([$expenseId]);
+        split_expense($expenseId, fetch_members($roomId), $amountCents);
+        if (!empty($expense['item_id'])) {
+            $pdo->prepare('UPDATE items SET last_amount_cents = ? WHERE id = ?')
+                ->execute([$amountCents, (int) $expense['item_id']]);
+        }
+        $pdo->commit();
+    } catch (Throwable $e) {
+        $pdo->rollBack();
+        throw $e;
+    }
+}
+
+function delete_room_expense(int $roomId, int $expenseId, int $actorMemberId): void
+{
+    $expense = fetch_room_expense($roomId, $expenseId);
+    assert_expense_owner($expense, $actorMemberId);
+    $pdo = db();
+    $pdo->prepare('DELETE FROM expense_shares WHERE expense_id = ?')->execute([$expenseId]);
+    $pdo->prepare('DELETE FROM expenses WHERE id = ? AND room_id = ?')->execute([$expenseId, $roomId]);
+}
+
+function fetch_expenses(int $roomId, ?int $viewerMemberId = null): array
 {
     $stmt = db()->prepare(
-        'SELECT e.id, e.title, e.emoji, e.amount_cents, e.created_at, m.id AS payer_id, m.name AS payer
+        'SELECT e.id, e.item_id, e.added_by, e.title, e.emoji, e.amount_cents, e.created_at, m.id AS payer_id, m.name AS payer
          FROM expenses e
          INNER JOIN members m ON m.id = e.paid_by
          WHERE e.room_id = ?
@@ -214,8 +273,11 @@ function fetch_expenses(int $roomId): array
     $rows = $stmt->fetchAll();
     foreach ($rows as &$row) {
         $row['id'] = (int) $row['id'];
+        $row['item_id'] = $row['item_id'] !== null ? (int) $row['item_id'] : null;
+        $row['added_by'] = (int) ($row['added_by'] ?? $row['payer_id']);
         $row['amount'] = from_cents((int) $row['amount_cents']);
         $row['payer_id'] = (int) $row['payer_id'];
+        $row['can_edit'] = $viewerMemberId !== null && $row['added_by'] === $viewerMemberId;
         unset($row['amount_cents']);
     }
     return $rows;
@@ -301,7 +363,7 @@ function room_state(): array
         ],
         'members' => $balances,
         'items' => fetch_items($roomId),
-        'expenses' => fetch_expenses($roomId),
+        'expenses' => fetch_expenses($roomId, (int) $member['id']),
         'settlements' => fetch_settlements($roomId),
         'payments' => suggested_payments($balances),
         'export_text' => room_export($roomId, $room['name'], $balances),

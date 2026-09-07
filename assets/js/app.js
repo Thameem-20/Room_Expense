@@ -51,14 +51,22 @@
         return data;
     }
 
+    let toastTimer = 0;
+
     function toast(message) {
         state.toast = message;
-        render();
-        setTimeout(() => {
-            if (state.toast === message) {
-                state.toast = "";
-                render();
-            }
+        let el = document.getElementById("app-toast");
+        if (!el) {
+            el = document.createElement("div");
+            el.id = "app-toast";
+            el.className = "toast";
+            document.body.appendChild(el);
+        }
+        el.textContent = message;
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+            el.remove();
+            if (state.toast === message) state.toast = "";
         }, 2400);
     }
 
@@ -71,6 +79,7 @@
 
     function openSheet(sheet) {
         state.sheet = sheet;
+        state.sheetOpenedAt = Date.now();
         document.body.classList.add("modal-open");
         render();
     }
@@ -354,16 +363,18 @@
     }
 
     function expenseRow(exp) {
-        return `
-            <article class="row">
+        const body = `
                 <div class="emo">${exp.emoji}</div>
                 <div class="meta">
                     <b>${esc(exp.title)}</b>
                     <small>${esc(exp.payer)} paid · ${timeAgo(exp.created_at)}</small>
                 </div>
                 <div class="amt">${money(exp.amount)}</div>
-            </article>
         `;
+        if (exp.can_edit) {
+            return `<button type="button" class="row expense-row" data-expense="${exp.id}">${body}</button>`;
+        }
+        return `<article class="row">${body}</article>`;
     }
 
     function renderPeople() {
@@ -377,6 +388,7 @@
                         <div class="eyebrow">${esc(d.room.name)}</div>
                         <h1>Roommates</h1>
                     </div>
+                    <button type="button" class="btn small ghost" id="settle-history">History</button>
                 </div>
                 <div class="stat-row">
                     <div class="stat"><small>Owed</small><b>${owed}</b></div>
@@ -391,8 +403,8 @@
                                 <small>${m.username ? "@" + esc(m.username) + " · " : ""}${esc(m.label)}</small>
                             </div>
                             <div class="member-side">
-                                <div class="amt ${m.owes ? "neg" : m.is_owed ? "pos" : ""}">${m.balance_cents === 0 ? "—" : (m.owes ? "−" : "+") + money(m.pending)}</div>
-                                ${m.owes ? `<button class="btn small settle" data-settle="${m.id}">Settle</button>` : ""}
+                                <div class="amt ${m.owes ? "neg" : m.is_owed ? "pos" : ""}">${m.balance_cents === 0 ? "—" : (m.owes ? "−" : "+") + m.pending}</div>
+                                ${m.id === d.me.id && m.owes ? `<button class="btn small settle" data-settle="${m.id}">Settle</button>` : ""}
                             </div>
                         </article>
                     `).join("")}
@@ -423,11 +435,11 @@
                     </div>
                 ` : `<div class="empty"><strong>No order yet</strong>Add roommates to start the cleaning rotation.</div>`}
                 <div class="section-head"><h2>Cleaning order</h2></div>
-                <p class="hint">Hold the dots and drag, or use the arrows. Move someone down if they are away.</p>
+                <p class="hint">Press and hold the dots, then drag. Or use the arrows. Move someone down if they are away.</p>
                 <div class="list" id="bath-list">
                     ${bath.order.map((m) => `
                         <article class="row bath-row ${m.is_current ? "current" : ""}" data-bath-id="${m.id}">
-                            <button type="button" class="drag-handle" aria-label="Drag to reorder">⋮⋮</button>
+                            <button type="button" class="drag-handle" aria-label="Press and hold to reorder">⋮⋮</button>
                             <div class="pos">${m.position}</div>
                             <div class="avatar">${esc(m.name.slice(0,1).toUpperCase())}</div>
                             <div class="meta">
@@ -530,13 +542,13 @@
     function sheetExpense(item) {
         const members = state.data.members;
         const me = state.data.me.id;
-        const prefill = state.sheet.amount ?? item.last_amount ?? "";
+        const typed = state.sheet.amount ?? "0.00";
         const payer = state.sheet.payer || me;
         const body = `
             <p class="hint">Split across all ${members.length} roommates</p>
             <div class="field">
                 <label>Amount (${cfg.currency})</label>
-                <input id="exp-amount" type="number" inputmode="decimal" step="0.01" min="0" value="${esc(prefill)}" placeholder="10.00" autofocus>
+                <input id="exp-amount" type="text" inputmode="decimal" value="${esc(typed)}" placeholder="0.00">
             </div>
             <label>Who paid</label>
             <div class="payers">
@@ -568,7 +580,7 @@
             </div>
             <div class="field">
                 <label>Amount (${cfg.currency})</label>
-                <input id="exp-amount" type="number" inputmode="decimal" step="0.01" min="0" placeholder="10.00" value="${esc(state.sheet.amount || "")}">
+                <input id="exp-amount" type="text" inputmode="decimal" placeholder="0.00" value="${esc(state.sheet.amount || "0.00")}">
             </div>
             <label>Who paid</label>
             <div class="payers">
@@ -593,16 +605,66 @@
         return modalShell(esc(me.name || user.name || "Account"), body, { center: true });
     }
 
+    function sheetEditExpense(exp) {
+        const members = state.data.members;
+        const payer = state.sheet.payer || exp.payer_id;
+        const amount = state.sheet.amount ?? exp.amount;
+        const body = `
+            <p class="hint">${esc(exp.payer)} paid · ${esc(dateStamp(exp.created_at))}</p>
+            <div class="field">
+                <label>Amount (${cfg.currency})</label>
+                <input id="exp-amount" type="text" inputmode="decimal" value="${esc(amount)}" placeholder="0.00">
+            </div>
+            <label>Who paid</label>
+            <div class="payers">
+                ${members.map((m) => `<button type="button" class="${m.id === payer ? "on" : ""}" data-payer="${m.id}">${esc(m.name)}</button>`).join("")}
+            </div>
+            <div class="modal-actions">
+                <button class="btn${state.busy ? " loading" : ""}" id="save-edit-expense" ${state.busy ? "disabled" : ""}>Save changes</button>
+                <button class="btn ghost" id="ask-delete-expense">Delete expense</button>
+            </div>
+        `;
+        return modalShell(`${exp.emoji} ${esc(exp.title)}`, body);
+    }
+
+    function sheetDeleteExpense(exp) {
+        const body = `
+            <div class="confirm-icon">✕</div>
+            <p class="hint" style="margin-top:0">Remove ${esc(exp.emoji)} ${esc(exp.title)} for ${money(exp.amount)}? Balances will update for everyone.</p>
+            <div class="modal-actions">
+                <button class="btn danger${state.busy ? " loading" : ""}" id="confirm-delete-expense" ${state.busy ? "disabled" : ""}>Delete</button>
+                <button class="btn ghost" id="back-edit-expense">Back</button>
+            </div>
+        `;
+        return modalShell("Delete expense", body, { center: true });
+    }
+
     function sheetSettle(member) {
         const body = `
             <div class="confirm-icon ok">✓</div>
-            <p class="hint" style="margin-top:0">${esc(member.name)} currently owes ${money(member.pending)}. After payment, this clears their pending amount.</p>
+            <p class="hint" style="margin-top:0">You currently owe ${money(member.pending)}. After you pay, this clears your pending amount.</p>
             <div class="modal-actions">
                 <button class="btn settle${state.busy ? " loading" : ""}" id="confirm-settle" data-settle-confirm="${member.id}" ${state.busy ? "disabled" : ""}>Mark as paid</button>
                 <button class="btn ghost" id="cancel-sheet">Cancel</button>
             </div>
         `;
-        return modalShell(`Settle ${esc(member.name)}`, body, { center: true });
+        return modalShell("Settle your amount", body, { center: true });
+    }
+
+    function sheetSettleHistory() {
+        const settled = paged(state.data.settlements || [], "settled");
+        const body = settled.total ? `
+            <div class="list">
+                ${settled.items.map((s) => `
+                    <article class="row">
+                        <div class="meta"><b>${esc(s.from_name)} paid ${esc(s.to_name)}</b><small>${dateStamp(s.created_at)}</small></div>
+                        <div class="amt pos">${money(s.amount)}</div>
+                    </article>
+                `).join("")}
+            </div>
+            ${pager("settled", settled)}
+        ` : `<div class="empty"><strong>No settlements yet</strong>When someone settles their amount, it shows up here.</div>`;
+        return modalShell("Settlement history", body);
     }
 
     function renderNav() {
@@ -634,7 +696,10 @@
         document.body.classList.add("modal-open");
         if (state.sheet.type === "expense") return sheetExpense(state.sheet.item);
         if (state.sheet.type === "new") return sheetNewItem();
+        if (state.sheet.type === "edit-expense") return sheetEditExpense(state.sheet.expense);
+        if (state.sheet.type === "delete-expense") return sheetDeleteExpense(state.sheet.expense);
         if (state.sheet.type === "settle") return sheetSettle(state.sheet.member);
+        if (state.sheet.type === "settle-history") return sheetSettleHistory();
         if (state.sheet.type === "account") return sheetAccount();
         return "";
     }
@@ -654,7 +719,7 @@
             if (state.tab === "bath") body = renderBathroom();
             if (state.tab === "history") body = renderHistory();
         }
-        root.innerHTML = body + renderNav() + renderSheet() + (state.toast ? `<div class="toast">${esc(state.toast)}</div>` : "");
+        root.innerHTML = body + renderNav() + renderSheet();
         bind();
     }
 
@@ -869,6 +934,7 @@
                     applyRoom(data);
                     state.page.bath = 1;
                     state.tab = "bath";
+                    render();
                     const next = data.bathroom_result?.next;
                     toast(next ? `Next up: ${next}` : "Bathroom marked done");
                 } catch (err) {
@@ -910,17 +976,58 @@
 
         const bathList = document.getElementById("bath-list");
         if (bathList) {
+            const HOLD_MS = 420;
+            const MOVE_CANCEL = 10;
             let dragRow = null;
+            let holdTimer = null;
+            let armed = false;
+            let startX = 0;
+            let startY = 0;
+            let startIds = [];
+
+            const clearHold = () => {
+                clearTimeout(holdTimer);
+                holdTimer = null;
+            };
+
+            const resetDrag = (row) => {
+                clearHold();
+                row?.classList.remove("holding", "dragging");
+                dragRow = null;
+                armed = false;
+            };
+
             bathList.querySelectorAll(".drag-handle").forEach((handle) => {
                 handle.addEventListener("pointerdown", (e) => {
-                    dragRow = handle.closest("[data-bath-id]");
-                    if (!dragRow) return;
-                    dragRow.classList.add("dragging");
+                    const row = handle.closest("[data-bath-id]");
+                    if (!row) return;
+                    resetDrag(dragRow);
+                    dragRow = row;
+                    armed = false;
+                    startX = e.clientX;
+                    startY = e.clientY;
+                    startIds = [...bathList.querySelectorAll("[data-bath-id]")].map((el) => Number(el.dataset.bathId));
+                    row.classList.add("holding");
                     handle.setPointerCapture(e.pointerId);
                     e.preventDefault();
+                    holdTimer = setTimeout(() => {
+                        if (dragRow !== row) return;
+                        armed = true;
+                        row.classList.remove("holding");
+                        row.classList.add("dragging");
+                        if (navigator.vibrate) navigator.vibrate(12);
+                    }, HOLD_MS);
                 });
                 handle.addEventListener("pointermove", (e) => {
                     if (!dragRow) return;
+                    if (!armed) {
+                        const moved = Math.hypot(e.clientX - startX, e.clientY - startY);
+                        if (moved > MOVE_CANCEL) {
+                            resetDrag(dragRow);
+                            try { handle.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
+                        }
+                        return;
+                    }
                     const over = document.elementFromPoint(e.clientX, e.clientY)?.closest("#bath-list [data-bath-id]");
                     if (!over || over === dragRow) return;
                     const rect = over.getBoundingClientRect();
@@ -931,10 +1038,12 @@
                     }
                 });
                 const finish = async () => {
-                    if (!dragRow) return;
-                    dragRow.classList.remove("dragging");
+                    const row = dragRow;
+                    const didDrag = armed;
+                    resetDrag(row);
+                    if (!didDrag) return;
                     const ids = [...bathList.querySelectorAll("[data-bath-id]")].map((el) => Number(el.dataset.bathId));
-                    dragRow = null;
+                    if (ids.length === startIds.length && ids.every((id, i) => id === startIds[i])) return;
                     try {
                         await saveBathOrder(ids);
                     } catch (err) {
@@ -946,17 +1055,31 @@
             });
         }
 
+        document.querySelectorAll("[data-expense]").forEach((btn) => {
+            btn.onclick = () => {
+                const exp = state.data.expenses.find((e) => String(e.id) === btn.dataset.expense);
+                if (!exp) return;
+                openSheet({ type: "edit-expense", expense: exp, amount: exp.amount, payer: exp.payer_id });
+                setTimeout(() => document.getElementById("exp-amount")?.focus(), 80);
+            };
+        });
+
         document.querySelectorAll("[data-quick]").forEach((btn) => {
             btn.onclick = () => {
                 const item = state.data.items.find((i) => String(i.id) === btn.dataset.quick);
-                openSheet({ type: "expense", item, payer: state.data.me.id });
-                setTimeout(() => document.getElementById("exp-amount")?.focus(), 80);
+                openSheet({ type: "expense", item, amount: "0.00", payer: state.data.me.id });
+                setTimeout(() => {
+                    const input = document.getElementById("exp-amount");
+                    if (!input) return;
+                    input.focus();
+                    input.select();
+                }, 80);
             };
         });
 
         document.querySelectorAll("[data-new-item]").forEach((btn) => {
             btn.onclick = () => {
-                openSheet({ type: "new", emoji: "🛒", title: "", amount: "", payer: state.data.me.id });
+                openSheet({ type: "new", emoji: "🛒", title: "", amount: "0.00", payer: state.data.me.id });
                 setTimeout(() => document.getElementById("item-name")?.focus(), 80);
             };
         });
@@ -999,8 +1122,8 @@
                     state.sheet = null;
                     state.busy = false;
                     document.body.classList.remove("modal-open");
-                    toast("Expense added and split");
                     render();
+                    toast("Expense added and split");
                 } catch (err) {
                     state.busy = false;
                     toast(err.message);
@@ -1041,8 +1164,8 @@
                     state.sheet = null;
                     state.busy = false;
                     document.body.classList.remove("modal-open");
-                    toast("New item saved");
                     render();
+                    toast("New item saved");
                 } catch (err) {
                     state.busy = false;
                     toast(err.message);
@@ -1055,9 +1178,88 @@
         document.querySelectorAll("[data-settle]").forEach((btn) => {
             btn.onclick = () => {
                 const member = state.data.members.find((m) => String(m.id) === btn.dataset.settle);
+                if (!member || member.id !== state.data.me.id) return;
                 openSheet({ type: "settle", member });
             };
         });
+
+        const settleHistory = document.getElementById("settle-history");
+        if (settleHistory) {
+            settleHistory.onclick = () => openSheet({ type: "settle-history" });
+        }
+
+        const saveEdit = document.getElementById("save-edit-expense");
+        if (saveEdit) {
+            const save = async () => {
+                if (state.busy) return;
+                captureSheetDraft();
+                state.busy = true;
+                saveEdit.classList.add("loading");
+                saveEdit.disabled = true;
+                try {
+                    const data = await api("update_expense", {
+                        expense_id: state.sheet.expense.id,
+                        amount: state.sheet.amount,
+                        paid_by: currentPayer()
+                    });
+                    applyRoom(data);
+                    state.sheet = null;
+                    state.busy = false;
+                    document.body.classList.remove("modal-open");
+                    toast("Expense updated");
+                    render();
+                } catch (err) {
+                    state.busy = false;
+                    toast(err.message);
+                    render();
+                }
+            };
+            saveEdit.onclick = save;
+            document.getElementById("exp-amount")?.addEventListener("keydown", (e) => {
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                    save();
+                }
+            });
+        }
+
+        const askDelete = document.getElementById("ask-delete-expense");
+        if (askDelete) {
+            askDelete.onclick = () => {
+                captureSheetDraft();
+                openSheet({ type: "delete-expense", expense: state.sheet.expense });
+            };
+        }
+
+        const backEdit = document.getElementById("back-edit-expense");
+        if (backEdit) {
+            backEdit.onclick = () => {
+                const exp = state.sheet.expense;
+                openSheet({ type: "edit-expense", expense: exp, amount: exp.amount, payer: exp.payer_id });
+            };
+        }
+
+        const confirmDeleteExp = document.getElementById("confirm-delete-expense");
+        if (confirmDeleteExp) {
+            confirmDeleteExp.onclick = async () => {
+                if (state.busy) return;
+                state.busy = true;
+                render();
+                try {
+                    const data = await api("delete_expense", { expense_id: state.sheet.expense.id });
+                    applyRoom(data);
+                    state.sheet = null;
+                    state.busy = false;
+                    document.body.classList.remove("modal-open");
+                    toast("Expense deleted");
+                    render();
+                } catch (err) {
+                    state.busy = false;
+                    toast(err.message);
+                    render();
+                }
+            };
+        }
 
         const confirmSettle = document.getElementById("confirm-settle");
         if (confirmSettle) {
@@ -1117,6 +1319,8 @@
         const sheet = document.getElementById("sheet");
         if (sheet) {
             sheet.addEventListener("click", (e) => {
+                const justOpened = Date.now() - (state.sheetOpenedAt || 0) < 450;
+                if (justOpened && e.target.id === "sheet") return;
                 if (e.target.id === "sheet" || e.target.id === "cancel-sheet" || e.target.closest("#cancel-sheet")) {
                     closeSheet();
                 }

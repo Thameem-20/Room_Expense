@@ -119,8 +119,8 @@ try {
             $members = fetch_members($roomId);
             $pdo = db();
             $pdo->beginTransaction();
-            $pdo->prepare('INSERT INTO expenses (room_id, item_id, title, emoji, amount_cents, paid_by) VALUES (?, ?, ?, ?, ?, ?)')
-                ->execute([$roomId, $itemId, $title, $emoji, $amountCents, $paidBy]);
+            $pdo->prepare('INSERT INTO expenses (room_id, item_id, title, emoji, amount_cents, paid_by, added_by) VALUES (?, ?, ?, ?, ?, ?, ?)')
+                ->execute([$roomId, $itemId, $title, $emoji, $amountCents, $paidBy, (int) $me['id']]);
             $expenseId = (int) $pdo->lastInsertId();
             split_expense($expenseId, $members, $amountCents);
             $pdo->prepare('UPDATE items SET last_amount_cents = ? WHERE id = ?')->execute([$amountCents, $itemId]);
@@ -132,6 +132,9 @@ try {
             $me = require_member();
             $roomId = (int) $me['room_id'];
             $memberId = (int) ($input['member_id'] ?? 0);
+            if ($memberId !== (int) $me['id']) {
+                json_response(['ok' => false, 'error' => 'You can only settle your own amount.'], 403);
+            }
             $created = settle_member($roomId, $memberId);
             json_response(array_merge(room_state(), ['settled' => $created]));
 
@@ -151,15 +154,20 @@ try {
             save_bathroom_order($roomId, $ids);
             json_response(room_state());
 
+        case 'update_expense':
+            $me = require_member();
+            update_expense(
+                (int) $me['room_id'],
+                (int) ($input['expense_id'] ?? 0),
+                to_cents($input['amount'] ?? 0),
+                (int) ($input['paid_by'] ?? $me['id']),
+                (int) $me['id']
+            );
+            json_response(room_state());
+
         case 'delete_expense':
             $me = require_member();
-            $roomId = (int) $me['room_id'];
-            $expenseId = (int) ($input['expense_id'] ?? 0);
-            $stmt = db()->prepare('DELETE FROM expenses WHERE id = ? AND room_id = ?');
-            $stmt->execute([$expenseId, $roomId]);
-            if ($stmt->rowCount() < 1) {
-                json_response(['ok' => false, 'error' => 'Expense not found.'], 404);
-            }
+            delete_room_expense((int) $me['room_id'], (int) ($input['expense_id'] ?? 0), (int) $me['id']);
             json_response(room_state());
 
         default:

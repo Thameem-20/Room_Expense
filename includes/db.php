@@ -113,6 +113,11 @@ function migrate(PDO $pdo): void
         ) ENGINE=InnoDB
     SQL);
 
+    if (!table_has_column($pdo, 'expenses', 'added_by')) {
+        $pdo->exec('ALTER TABLE expenses ADD COLUMN added_by INT UNSIGNED NULL AFTER paid_by');
+        $pdo->exec('UPDATE expenses SET added_by = paid_by WHERE added_by IS NULL');
+    }
+
     if (!table_has_column($pdo, 'members', 'user_id')) {
         $pdo->exec('ALTER TABLE members ADD COLUMN user_id INT UNSIGNED NULL AFTER name_key');
         $pdo->exec('ALTER TABLE members ADD UNIQUE KEY uq_members_room_user (room_id, user_id)');

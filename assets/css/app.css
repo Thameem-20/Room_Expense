@@ -455,12 +455,34 @@ body:has(.screen.auth) .toast {
 .row .meta { flex: 1; min-width: 0; }
 .row .meta b { display: block; font-size: 14px; font-weight: 700; }
 .row .meta small { color: var(--muted); font-size: 12px; }
-.row .amt { font-weight: 700; font-size: 14px; white-space: nowrap; flex: none; }
+.row .amt {
+    font-weight: 700;
+    font-size: 14px;
+    white-space: nowrap;
+    flex: none;
+    width: max-content;
+}
 .row .amt.pos { color: var(--ok); }
 .row .amt.neg { color: var(--danger); }
 
-.member-row { display: flex; align-items: center; overflow: visible; }
-.member-row .meta { flex: 1; min-width: 0; }
+button.expense-row {
+    width: 100%;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+button.expense-row:active {
+    background: var(--card-2);
+}
+
+.member-row {
+    display: flex;
+    align-items: center;
+    overflow: visible;
+    min-width: 0;
+}
+.member-row .meta { flex: 1 1 auto; min-width: 0; }
 .member-row .meta b,
 .member-row .meta small {
     overflow: hidden;
@@ -473,6 +495,8 @@ body:has(.screen.auth) .toast {
     align-items: flex-end;
     gap: 8px;
     flex: 0 0 auto;
+    width: max-content;
+    min-width: max-content;
 }
 
 .badge {
@@ -570,10 +594,15 @@ body:has(.screen.auth) .toast {
     border-color: #99f6e4;
     background: var(--accent-soft);
 }
+.bath-row.holding {
+    transform: scale(0.98);
+    transition: transform 0.2s var(--ease);
+}
 .bath-row.dragging {
     opacity: 0.75;
     box-shadow: var(--shadow);
     cursor: grabbing;
+    transform: scale(1.02);
 }
 
 .drag-handle {

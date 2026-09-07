@@ -3,9 +3,9 @@
 declare(strict_types=1);
 
 const DB_HOST = 'localhost';
-const DB_USER = 'root';
-const DB_PASS = '';
-const DB_NAME = 'room_expense';
+const DB_USER = 'u593219986_thameemexp';
+const DB_PASS = 'hU5mX2~Q2>y';
+const DB_NAME = 'u593219986_roomexpense';
 
 const APP_NAME = 'RoomTab';
 const CURRENCY = 'AED';

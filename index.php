@@ -30,7 +30,7 @@ $title = APP_NAME;
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="<?= htmlspecialchars($base) ?>/assets/css/app.css?v=23">
+    <link rel="stylesheet" href="<?= htmlspecialchars($base) ?>/assets/css/app.css?v=24">
 </head>
 <body>
     <div id="app" class="app"></div>
@@ -42,7 +42,7 @@ $title = APP_NAME;
             currency: <?= json_encode(CURRENCY) ?>
         };
     </script>
-    <script src="<?= htmlspecialchars($base) ?>/assets/js/app.js?v=25"></script>
+    <script src="<?= htmlspecialchars($base) ?>/assets/js/app.js?v=26"></script>
     <script src="<?= htmlspecialchars($base) ?>/assets/js/pwa.js?v=4"></script>
 </body>
 </html>

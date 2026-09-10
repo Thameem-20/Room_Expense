@@ -472,7 +472,14 @@ body:has(.screen.auth) .toast {
 
 .row .meta { flex: 1; min-width: 0; }
 .row .meta b { display: block; font-size: 14px; font-weight: 700; }
-.row .meta small { color: var(--muted); font-size: 12px; }
+.row .meta small {
+    color: var(--muted);
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: block;
+}
 .row .amt {
     font-weight: 700;
     font-size: 14px;
@@ -766,8 +773,15 @@ button.expense-row:active {
     color: var(--ok);
 }
 
-.payers { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
-.payers button {
+.payers,
+.splitters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+.payers button,
+.splitters button {
     border: 1px solid var(--line);
     background: var(--card-2);
     border-radius: 999px;
@@ -775,10 +789,22 @@ button.expense-row:active {
     font-weight: 600;
     font-size: 13px;
 }
-.payers button.on {
+.payers button.on,
+.splitters button.on {
     background: var(--bg-deep);
     color: #f8fafc;
     border-color: var(--bg-deep);
+}
+.splitters button:disabled {
+    opacity: 1;
+    cursor: default;
+}
+
+.detail-amount {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    margin: 4px 0 16px;
 }
 
 .emoji-grid {

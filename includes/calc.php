@@ -190,7 +190,7 @@ function split_expense(int $expenseId, array $members, int $amountCents): void
 {
     $n = count($members);
     if ($n < 1) {
-        throw new RuntimeException('A room needs members before adding expenses.');
+        throw new InvalidArgumentException('Select at least one person to split with.');
     }
     $base = intdiv($amountCents, $n);
     $rem = $amountCents % $n;
@@ -199,6 +199,54 @@ function split_expense(int $expenseId, array $members, int $amountCents): void
         $share = $base + ($i < $rem ? 1 : 0);
         $stmt->execute([$expenseId, (int) $member['id'], $share]);
     }
+}
+
+function members_for_split(int $roomId, mixed $ids): array
+{
+    $all = fetch_members($roomId);
+    if (!is_array($ids) || $ids === []) {
+        return $all;
+    }
+    $wanted = [];
+    foreach ($ids as $id) {
+        $wanted[(int) $id] = true;
+    }
+    $selected = [];
+    foreach ($all as $member) {
+        if (isset($wanted[(int) $member['id']])) {
+            $selected[] = $member;
+        }
+    }
+    if (!$selected) {
+        throw new InvalidArgumentException('Select at least one person to split with.');
+    }
+    if (count($selected) !== count($wanted)) {
+        throw new InvalidArgumentException('A selected person is not in this room.');
+    }
+    return $selected;
+}
+
+function fetch_shares_by_expense(int $roomId): array
+{
+    $stmt = db()->prepare(
+        'SELECT s.expense_id, s.member_id, s.share_cents, m.name
+         FROM expense_shares s
+         INNER JOIN expenses e ON e.id = s.expense_id
+         INNER JOIN members m ON m.id = s.member_id
+         WHERE e.room_id = ?
+         ORDER BY m.name ASC'
+    );
+    $stmt->execute([$roomId]);
+    $map = [];
+    foreach ($stmt->fetchAll() as $row) {
+        $eid = (int) $row['expense_id'];
+        $map[$eid][] = [
+            'id' => (int) $row['member_id'],
+            'name' => $row['name'],
+            'share' => from_cents((int) $row['share_cents']),
+        ];
+    }
+    return $map;
 }
 
 function fetch_room_expense(int $roomId, int $expenseId): array
@@ -220,26 +268,22 @@ function assert_expense_owner(array $expense, int $memberId): void
     }
 }
 
-function update_expense(int $roomId, int $expenseId, int $amountCents, int $paidBy, int $actorMemberId): void
+function update_expense(int $roomId, int $expenseId, int $amountCents, int $actorMemberId, array $splitMemberIds = []): void
 {
     if ($amountCents < 1) {
         throw new InvalidArgumentException('Enter an amount greater than 0.');
     }
     $expense = fetch_room_expense($roomId, $expenseId);
     assert_expense_owner($expense, $actorMemberId);
-    $payerCheck = db()->prepare('SELECT id FROM members WHERE id = ? AND room_id = ?');
-    $payerCheck->execute([$paidBy, $roomId]);
-    if (!$payerCheck->fetch()) {
-        throw new InvalidArgumentException('Payer is not in this room.');
-    }
+    $splitWith = members_for_split($roomId, $splitMemberIds);
 
     $pdo = db();
     $pdo->beginTransaction();
     try {
-        $pdo->prepare('UPDATE expenses SET amount_cents = ?, paid_by = ? WHERE id = ? AND room_id = ?')
-            ->execute([$amountCents, $paidBy, $expenseId, $roomId]);
+        $pdo->prepare('UPDATE expenses SET amount_cents = ? WHERE id = ? AND room_id = ?')
+            ->execute([$amountCents, $expenseId, $roomId]);
         $pdo->prepare('DELETE FROM expense_shares WHERE expense_id = ?')->execute([$expenseId]);
-        split_expense($expenseId, fetch_members($roomId), $amountCents);
+        split_expense($expenseId, $splitWith, $amountCents);
         if (!empty($expense['item_id'])) {
             $pdo->prepare('UPDATE items SET last_amount_cents = ? WHERE id = ?')
                 ->execute([$amountCents, (int) $expense['item_id']]);
@@ -270,6 +314,7 @@ function fetch_expenses(int $roomId, ?int $viewerMemberId = null): array
          ORDER BY e.created_at DESC, e.id DESC'
     );
     $stmt->execute([$roomId]);
+    $shares = fetch_shares_by_expense($roomId);
     $rows = $stmt->fetchAll();
     foreach ($rows as &$row) {
         $row['id'] = (int) $row['id'];
@@ -278,6 +323,8 @@ function fetch_expenses(int $roomId, ?int $viewerMemberId = null): array
         $row['amount'] = from_cents((int) $row['amount_cents']);
         $row['payer_id'] = (int) $row['payer_id'];
         $row['can_edit'] = $viewerMemberId !== null && $row['added_by'] === $viewerMemberId;
+        $row['split_with'] = $shares[$row['id']] ?? [];
+        $row['split_count'] = count($row['split_with']);
         unset($row['amount_cents']);
     }
     return $rows;

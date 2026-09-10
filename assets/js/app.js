@@ -361,7 +361,7 @@
                 <div class="balance">
                     <small>${heading}</small>
                     <strong>${money(me.pending)}</strong>
-                    <span>Split equally across everyone in the room</span>
+                    <span>Split with everyone, or only the people you pick</span>
                 </div>
                 <div class="section-head"><h2>Quick add</h2></div>
                 <div class="quick-grid">
@@ -396,14 +396,55 @@
                 <div class="emo">${exp.emoji}</div>
                 <div class="meta">
                     <b>${esc(exp.title)}</b>
-                    <small>${esc(exp.payer)} paid · ${timeAgo(exp.created_at)}</small>
+                    <small>${esc(exp.payer)} paid · ${esc(splitNames(exp))} · ${timeAgo(exp.created_at)}</small>
                 </div>
                 <div class="amt">${money(exp.amount)}</div>
         `;
-        if (exp.can_edit) {
-            return `<button type="button" class="row expense-row" data-expense="${exp.id}">${body}</button>`;
-        }
-        return `<article class="row">${body}</article>`;
+        return `<button type="button" class="row expense-row" data-expense="${exp.id}">${body}</button>`;
+    }
+
+    function allMemberIds() {
+        return (state.data?.members || []).map((m) => m.id);
+    }
+
+    function splitIdsFromExpense(exp) {
+        const ids = (exp.split_with || []).map((p) => p.id);
+        return ids.length ? ids : allMemberIds();
+    }
+
+    function splitNames(exp) {
+        const people = exp.split_with || [];
+        const total = (state.data?.members || []).length;
+        if (!people.length || people.length === total) return "everyone";
+        const me = state.data?.me?.id;
+        const names = people.map((p) => (p.id === me ? "you" : p.name));
+        if (names.length === 1) return names[0];
+        if (names.length === 2) return names[0] + " & " + names[1];
+        return names.length + " people";
+    }
+
+    function splitHint(ids) {
+        const total = (state.data?.members || []).length;
+        const n = ids.length;
+        if (n === total) return "Everyone in the room";
+        if (n === 1) return "1 person";
+        return n + " people";
+    }
+
+    function splitPicker(selectedIds, editable) {
+        const selected = new Set(selectedIds.map(Number));
+        const members = state.data.members || [];
+        return `
+            <label>Split with</label>
+            <p class="hint" id="split-hint">${esc(splitHint([...selected]))}</p>
+            <div class="splitters">
+                ${members.map((m) => `
+                    <button type="button" class="${selected.has(m.id) ? "on" : ""}" data-split="${m.id}" ${editable ? "" : "disabled"}>
+                        ${esc(m.name)}${m.id === state.data.me.id ? " · you" : ""}
+                    </button>
+                `).join("")}
+            </div>
+        `;
     }
 
     function renderPeople() {
@@ -569,20 +610,16 @@
     }
 
     function sheetExpense(item) {
-        const members = state.data.members;
-        const me = state.data.me.id;
+        const me = state.data.me;
         const typed = state.sheet.amount ?? "0.00";
-        const payer = state.sheet.payer || me;
+        const splitIds = state.sheet.splitIds?.length ? state.sheet.splitIds : allMemberIds();
         const body = `
-            <p class="hint">Split across all ${members.length} roommates</p>
+            <p class="hint">Paid by you, ${esc(me.name)}</p>
             <div class="field">
                 <label>Amount (${cfg.currency})</label>
                 <input id="exp-amount" type="text" inputmode="decimal" value="${esc(typed)}" placeholder="0.00">
             </div>
-            <label>Who paid</label>
-            <div class="payers">
-                ${members.map((m) => `<button type="button" class="${m.id === payer ? "on" : ""}" data-payer="${m.id}">${esc(m.name)}</button>`).join("")}
-            </div>
+            ${splitPicker(splitIds, true)}
             <div class="modal-actions">
                 <button class="btn${state.busy ? " loading" : ""}" id="save-expense" data-item="${item.id || ""}" ${state.busy ? "disabled" : ""}>Add expense</button>
             </div>
@@ -591,12 +628,11 @@
     }
 
     function sheetNewItem() {
-        const members = state.data.members;
-        const me = state.data.me.id;
+        const me = state.data.me;
         const selected = state.sheet.emoji || "🛒";
-        const payer = state.sheet.payer || me;
+        const splitIds = state.sheet.splitIds?.length ? state.sheet.splitIds : allMemberIds();
         const body = `
-            <p class="hint">Name it, give it an emoji, then log the first expense.</p>
+            <p class="hint">Name it, give it an emoji, then log the first expense. You are the one who paid.</p>
             <div class="field">
                 <label>Item name</label>
                 <input id="item-name" type="text" placeholder="Colgate" value="${esc(state.sheet.title || "")}">
@@ -611,10 +647,7 @@
                 <label>Amount (${cfg.currency})</label>
                 <input id="exp-amount" type="text" inputmode="decimal" placeholder="0.00" value="${esc(state.sheet.amount || "0.00")}">
             </div>
-            <label>Who paid</label>
-            <div class="payers">
-                ${members.map((m) => `<button type="button" class="${m.id === payer ? "on" : ""}" data-payer="${m.id}">${esc(m.name)}</button>`).join("")}
-            </div>
+            ${splitPicker(splitIds, true)}
             <div class="modal-actions">
                 <button class="btn${state.busy ? " loading" : ""}" id="save-new-item" ${state.busy ? "disabled" : ""}>Add expense</button>
             </div>
@@ -634,24 +667,37 @@
         return modalShell(esc(me.name || user.name || "Account"), body, { center: true });
     }
 
-    function sheetEditExpense(exp) {
-        const members = state.data.members;
-        const payer = state.sheet.payer || exp.payer_id;
+    function sheetExpenseDetail(exp) {
+        const people = exp.split_with || [];
+        const me = state.data.me.id;
+        const splitIds = state.sheet.splitIds?.length ? state.sheet.splitIds : splitIdsFromExpense(exp);
         const amount = state.sheet.amount ?? exp.amount;
+        const shareRows = people.map((p) => `
+            <article class="row">
+                <div class="avatar">${esc(p.name.slice(0, 1).toUpperCase())}</div>
+                <div class="meta"><b>${esc(p.name)}${p.id === me ? '<span class="badge">you</span>' : ""}</b><small>Share</small></div>
+                <div class="amt">${money(p.share)}</div>
+            </article>
+        `).join("");
         const body = `
             <p class="hint">${esc(exp.payer)} paid · ${esc(dateStamp(exp.created_at))}</p>
-            <div class="field">
-                <label>Amount (${cfg.currency})</label>
-                <input id="exp-amount" type="text" inputmode="decimal" value="${esc(amount)}" placeholder="0.00">
-            </div>
-            <label>Who paid</label>
-            <div class="payers">
-                ${members.map((m) => `<button type="button" class="${m.id === payer ? "on" : ""}" data-payer="${m.id}">${esc(m.name)}</button>`).join("")}
-            </div>
-            <div class="modal-actions">
-                <button class="btn${state.busy ? " loading" : ""}" id="save-edit-expense" ${state.busy ? "disabled" : ""}>Save changes</button>
-                <button class="btn ghost" id="ask-delete-expense">Delete expense</button>
-            </div>
+            ${exp.can_edit ? `
+                <div class="field">
+                    <label>Amount (${cfg.currency})</label>
+                    <input id="exp-amount" type="text" inputmode="decimal" value="${esc(amount)}" placeholder="0.00">
+                </div>
+                ${splitPicker(splitIds, true)}
+            ` : `
+                <div class="detail-amount">${money(exp.amount)}</div>
+                <label>Split with</label>
+                <div class="list" style="margin:8px 0 14px">${shareRows || `<div class="empty"><strong>Everyone</strong>Split equally across the room.</div>`}</div>
+            `}
+            ${exp.can_edit ? `
+                <div class="modal-actions">
+                    <button class="btn${state.busy ? " loading" : ""}" id="save-edit-expense" ${state.busy ? "disabled" : ""}>Save changes</button>
+                    <button class="btn ghost" id="ask-delete-expense">Delete expense</button>
+                </div>
+            ` : ""}
         `;
         return modalShell(`${exp.emoji} ${esc(exp.title)}`, body);
     }
@@ -725,7 +771,8 @@
         document.body.classList.add("modal-open");
         if (state.sheet.type === "expense") return sheetExpense(state.sheet.item);
         if (state.sheet.type === "new") return sheetNewItem();
-        if (state.sheet.type === "edit-expense") return sheetEditExpense(state.sheet.expense);
+        if (state.sheet.type === "expense-detail") return sheetExpenseDetail(state.sheet.expense);
+        if (state.sheet.type === "edit-expense") return sheetExpenseDetail(state.sheet.expense);
         if (state.sheet.type === "delete-expense") return sheetDeleteExpense(state.sheet.expense);
         if (state.sheet.type === "settle") return sheetSettle(state.sheet.member);
         if (state.sheet.type === "settle-history") return sheetSettleHistory();
@@ -791,9 +838,12 @@
         document.body.classList.remove("modal-open");
     }
 
-    function currentPayer() {
-        const on = document.querySelector(".payers button.on");
-        return on ? Number(on.dataset.payer) : state.data.me.id;
+    function currentSplitIds() {
+        const buttons = [...document.querySelectorAll("[data-split]")];
+        if (!buttons.length) {
+            return state.sheet?.splitIds?.length ? state.sheet.splitIds : allMemberIds();
+        }
+        return buttons.filter((b) => b.classList.contains("on")).map((b) => Number(b.dataset.split));
     }
 
     function captureSheetDraft() {
@@ -802,7 +852,7 @@
         const amount = document.getElementById("exp-amount");
         if (name) state.sheet.title = name.value;
         if (amount) state.sheet.amount = amount.value;
-        state.sheet.payer = currentPayer();
+        state.sheet.splitIds = currentSplitIds();
     }
 
     function bind() {
@@ -1087,15 +1137,20 @@
             btn.onclick = () => {
                 const exp = state.data.expenses.find((e) => String(e.id) === btn.dataset.expense);
                 if (!exp) return;
-                openSheet({ type: "edit-expense", expense: exp, amount: exp.amount, payer: exp.payer_id });
-                setTimeout(() => document.getElementById("exp-amount")?.focus(), 80);
+                openSheet({
+                    type: "expense-detail",
+                    expense: exp,
+                    amount: exp.amount,
+                    splitIds: splitIdsFromExpense(exp)
+                });
+                if (exp.can_edit) setTimeout(() => document.getElementById("exp-amount")?.focus(), 80);
             };
         });
 
         document.querySelectorAll("[data-quick]").forEach((btn) => {
             btn.onclick = () => {
                 const item = state.data.items.find((i) => String(i.id) === btn.dataset.quick);
-                openSheet({ type: "expense", item, amount: "0.00", payer: state.data.me.id });
+                openSheet({ type: "expense", item, amount: "0.00", splitIds: allMemberIds() });
                 setTimeout(() => {
                     const input = document.getElementById("exp-amount");
                     if (!input) return;
@@ -1107,7 +1162,7 @@
 
         document.querySelectorAll("[data-new-item]").forEach((btn) => {
             btn.onclick = () => {
-                openSheet({ type: "new", emoji: "🛒", title: "", amount: "0.00", payer: state.data.me.id });
+                openSheet({ type: "new", emoji: "🛒", title: "", amount: "0.00", splitIds: allMemberIds() });
                 setTimeout(() => document.getElementById("item-name")?.focus(), 80);
             };
         });
@@ -1120,10 +1175,18 @@
             };
         });
 
-        document.querySelectorAll("[data-payer]").forEach((btn) => {
+        document.querySelectorAll("[data-split]").forEach((btn) => {
             btn.onclick = () => {
-                document.querySelectorAll("[data-payer]").forEach((b) => b.classList.toggle("on", b === btn));
-                if (state.sheet) state.sheet.payer = Number(btn.dataset.payer);
+                if (btn.disabled) return;
+                const onButtons = [...document.querySelectorAll("[data-split].on")];
+                if (btn.classList.contains("on") && onButtons.length <= 1) {
+                    toast("Select at least one person");
+                    return;
+                }
+                btn.classList.toggle("on");
+                if (state.sheet) state.sheet.splitIds = currentSplitIds();
+                const hint = document.getElementById("split-hint");
+                if (hint) hint.textContent = splitHint(state.sheet.splitIds);
             };
         });
 
@@ -1134,7 +1197,6 @@
                 captureSheetDraft();
                 const amount = state.sheet.amount;
                 const itemId = Number(saveExp.dataset.item);
-                const paidBy = currentPayer();
                 state.busy = true;
                 saveExp.classList.add("loading");
                 saveExp.disabled = true;
@@ -1142,7 +1204,7 @@
                     const data = await api("add_expense", {
                         item_id: itemId,
                         amount,
-                        paid_by: paidBy
+                        split_with: currentSplitIds()
                     });
                     applyRoom(data);
                     state.page.recent = 1;
@@ -1175,7 +1237,6 @@
                 const title = state.sheet.title;
                 const emoji = state.sheet.emoji;
                 const amount = state.sheet.amount;
-                const paidBy = currentPayer();
                 state.busy = true;
                 saveNew.classList.add("loading");
                 saveNew.disabled = true;
@@ -1184,7 +1245,7 @@
                         title,
                         emoji,
                         amount,
-                        paid_by: paidBy
+                        split_with: currentSplitIds()
                     });
                     applyRoom(data);
                     state.page.recent = 1;
@@ -1228,7 +1289,7 @@
                     const data = await api("update_expense", {
                         expense_id: state.sheet.expense.id,
                         amount: state.sheet.amount,
-                        paid_by: currentPayer()
+                        split_with: currentSplitIds()
                     });
                     applyRoom(data);
                     state.sheet = null;
@@ -1263,7 +1324,12 @@
         if (backEdit) {
             backEdit.onclick = () => {
                 const exp = state.sheet.expense;
-                openSheet({ type: "edit-expense", expense: exp, amount: exp.amount, payer: exp.payer_id });
+                openSheet({
+                    type: "expense-detail",
+                    expense: exp,
+                    amount: state.sheet.amount || exp.amount,
+                    splitIds: state.sheet.splitIds || splitIdsFromExpense(exp)
+                });
             };
         }
 

@@ -79,12 +79,8 @@ try {
                 json_response(['ok' => false, 'error' => 'Enter an amount greater than 0.'], 422);
             }
 
-            $paidBy = (int) ($input['paid_by'] ?? $me['id']);
-            $payerCheck = db()->prepare('SELECT id FROM members WHERE id = ? AND room_id = ?');
-            $payerCheck->execute([$paidBy, $roomId]);
-            if (!$payerCheck->fetch()) {
-                json_response(['ok' => false, 'error' => 'Payer is not in this room.'], 422);
-            }
+            $paidBy = (int) $me['id'];
+            $splitWith = members_for_split($roomId, $input['split_with'] ?? []);
 
             $itemId = isset($input['item_id']) && $input['item_id'] !== '' ? (int) $input['item_id'] : null;
             $title = clean_name((string) ($input['title'] ?? ''));
@@ -116,13 +112,12 @@ try {
                 }
             }
 
-            $members = fetch_members($roomId);
             $pdo = db();
             $pdo->beginTransaction();
             $pdo->prepare('INSERT INTO expenses (room_id, item_id, title, emoji, amount_cents, paid_by, added_by) VALUES (?, ?, ?, ?, ?, ?, ?)')
                 ->execute([$roomId, $itemId, $title, $emoji, $amountCents, $paidBy, (int) $me['id']]);
             $expenseId = (int) $pdo->lastInsertId();
-            split_expense($expenseId, $members, $amountCents);
+            split_expense($expenseId, $splitWith, $amountCents);
             $pdo->prepare('UPDATE items SET last_amount_cents = ? WHERE id = ?')->execute([$amountCents, $itemId]);
             $pdo->commit();
 
@@ -156,12 +151,16 @@ try {
 
         case 'update_expense':
             $me = require_member();
+            $splitIds = $input['split_with'] ?? [];
+            if (!is_array($splitIds)) {
+                $splitIds = [];
+            }
             update_expense(
                 (int) $me['room_id'],
                 (int) ($input['expense_id'] ?? 0),
                 to_cents($input['amount'] ?? 0),
-                (int) ($input['paid_by'] ?? $me['id']),
-                (int) $me['id']
+                (int) $me['id'],
+                $splitIds
             );
             json_response(room_state());
 
